@@ -1,0 +1,14 @@
+{
+  "gui.portablestorage.title": "Портативный терминал",
+  "gui.portablestorage.terminal": "Терминал",
+  "gui.portablestorage.search_hint": "Поиск...",
+  "gui.portablestorage.sort.name": "Имя",
+  "gui.portablestorage.sort.count": "Кол-во",
+  "gui.portablestorage.sort.id": "ID",
+  "gui.portablestorage.sort.mod": "Мод",
+  "key.portablestorage.open_terminal": "Открыть портативный терминал",
+  "key.category.portablestorage.custom_category": "Portable Storage",
+  "msg.portablestorage.server_disabled": "Сервер отключил мод Portable Storage.",
+  "msg.portablestorage.no_containers": "Рядом не найдено контейнеров",
+  "modmenu.portablestorage.source": "Исходный код"
+}

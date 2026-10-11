@@ -1,0 +1,14 @@
+{
+  "gui.portablestorage.title": "Terminal portable",
+  "gui.portablestorage.terminal": "Terminal",
+  "gui.portablestorage.search_hint": "Rechercher...",
+  "gui.portablestorage.sort.name": "Nom",
+  "gui.portablestorage.sort.count": "Quantité",
+  "gui.portablestorage.sort.id": "ID",
+  "gui.portablestorage.sort.mod": "Mod",
+  "key.portablestorage.open_terminal": "Ouvrir le terminal portable",
+  "key.category.portablestorage.custom_category": "Portable Storage",
+  "msg.portablestorage.server_disabled": "Le serveur a désactivé le mod Portable Storage.",
+  "msg.portablestorage.no_containers": "Aucun conteneur trouvé à proximité",
+  "modmenu.portablestorage.source": "Code source"
+}

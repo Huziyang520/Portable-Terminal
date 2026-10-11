@@ -1,0 +1,39 @@
+# eclipse
+bin
+*.launch
+.settings
+.metadata
+.eclipse
+.classpath
+.project
+
+# idea
+out
+*.ipr
+*.iws
+*.iml
+.idea/*
+!.idea/scopes
+
+# gradle
+build
+.gradle
+
+# other
+run
+runs
+libs
+.vscode
+
+# java crash dumps
+hs_err_*.log
+*.hprof
+replay_*.log
+*.jfr
+
+# os
+.DS_Store
+Thumbs.db
+
+# keep the wrapper jar
+!gradle/wrapper/gradle-wrapper.jar

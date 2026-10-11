@@ -1,0 +1,14 @@
+{
+  "gui.portablestorage.title": "ポータブル端末",
+  "gui.portablestorage.terminal": "端末",
+  "gui.portablestorage.search_hint": "検索...",
+  "gui.portablestorage.sort.name": "名前",
+  "gui.portablestorage.sort.count": "個数",
+  "gui.portablestorage.sort.id": "ID",
+  "gui.portablestorage.sort.mod": "Mod",
+  "key.portablestorage.open_terminal": "ポータブル端末を開く",
+  "key.category.portablestorage.custom_category": "Portable Storage",
+  "msg.portablestorage.server_disabled": "サーバーが Portable Storage を無効にしました。",
+  "msg.portablestorage.no_containers": "近くにコンテナがありません",
+  "modmenu.portablestorage.source": "ソース"
+}

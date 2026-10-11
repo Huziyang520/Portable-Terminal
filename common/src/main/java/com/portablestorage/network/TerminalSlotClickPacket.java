@@ -1,0 +1,115 @@
+// Portions of this code (terminal item click handling)
+// are based on work by tom5454 (Tom's Simple Storage Mod),
+// distributed under the MIT License. See LICENSE.toms-simple-storage for details.
+package com.portablestorage.network;
+
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
+
+import com.portablestorage.PortableStorageMod;
+import com.portablestorage.menu.PortableStorageMenu;
+import com.portablestorage.platform.Services;
+
+public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shift) implements CustomPacketPayload {
+	public static final CustomPacketPayload.Type<TerminalSlotClickPacket> TYPE =
+		new CustomPacketPayload.Type<>(Identifier.tryBuild(PortableStorageMod.MOD_ID, "terminal_slot_click"));
+
+	public static final StreamCodec<FriendlyByteBuf, TerminalSlotClickPacket> CODEC = StreamCodec.of(
+		(buf, val) -> {
+			buf.writeIdentifier(val.itemId);
+			buf.writeByte(val.button);
+			buf.writeBoolean(val.shift);
+		},
+		buf -> new TerminalSlotClickPacket(
+			buf.readIdentifier(),
+			buf.readByte(),
+			buf.readBoolean()
+		)
+	);
+
+	@Override
+	public Type<? extends CustomPacketPayload> type() {
+		return TYPE;
+	}
+
+	private static final Identifier DEPOSIT_MARKER = Identifier.tryBuild("portablestorage", "deposit");
+
+	public static TerminalSlotClickPacket deposit() {
+		return new TerminalSlotClickPacket(DEPOSIT_MARKER, 0, false);
+	}
+
+	public boolean isDeposit() {
+		return DEPOSIT_MARKER.equals(this.itemId);
+	}
+
+	/** Server side handling; invoked by the loader's packet bootstrap. */
+	public static void handleServer(ServerPlayer player, TerminalSlotClickPacket packet) {
+		AbstractContainerMenu menu = player.containerMenu;
+		if (!(menu instanceof PortableStorageMenu psm)) return;
+
+		ItemStack carried = menu.getCarried();
+
+		if (packet.isDeposit()) {
+			if (carried.isEmpty()) return;
+			ItemStack remaining = psm.insertIntoContainers(carried.copy());
+			menu.setCarried(remaining);
+			menu.broadcastChanges();
+			Services.PLATFORM.sendToPlayer(player, TerminalItemsSyncPacket.fromItemStacks(psm.getAggregatedItems()));
+			return;
+		}
+
+		ItemStack template = null;
+		for (ItemStack stack : psm.getAggregatedItems()) {
+			Identifier stackId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+			if (stackId != null && stackId.equals(packet.itemId())) {
+				template = stack;
+				break;
+			}
+		}
+		if (template == null || template.isEmpty()) return;
+
+		int count;
+		if (packet.shift()) {
+			count = Math.min(template.getMaxStackSize(), 64);
+		} else {
+			count = switch (packet.button()) {
+				case 0 -> Math.min(template.getMaxStackSize(), 64);
+				case 1 -> Math.min(32, (template.getCount() + 1) / 2);
+				default -> 1;
+			};
+		}
+
+		ItemStack extracted = psm.extractFromContainers(template, count);
+		if (!extracted.isEmpty()) {
+			if (packet.shift()) {
+				player.getInventory().placeItemBackInInventory(extracted);
+			} else {
+				if (!carried.isEmpty()) {
+					if (ItemStack.isSameItemSameComponents(carried, extracted)) {
+						int space = carried.getMaxStackSize() - carried.getCount();
+						int add = Math.min(space, extracted.getCount());
+						carried.grow(add);
+						extracted.shrink(add);
+						if (!extracted.isEmpty()) {
+							psm.insertIntoContainers(extracted);
+						}
+					} else {
+						psm.insertIntoContainers(carried);
+						menu.setCarried(extracted);
+					}
+				} else {
+					menu.setCarried(extracted);
+				}
+			}
+		}
+
+		menu.broadcastChanges();
+		Services.PLATFORM.sendToPlayer(player, TerminalItemsSyncPacket.fromItemStacks(psm.getAggregatedItems()));
+	}
+}

@@ -1,88 +1,109 @@
 # Portable Storage
 
-一个基于 Fabric 的 Minecraft 模组，用于在近距离范围内扫描并统一管理附近容器中的物品，提供一个便携式终端界面，支持快速查看、搜索、存取和排序。
+A lightweight portable terminal that lets you browse, search and move items across every container
+near you, without opening them one by one.
 
-## 模组简介
+## What it does
 
-该模组的核心功能是：
+- Scans the containers around you and shows everything they hold in one list.
+- Searches by item name or by item ID, including tag lookups such as `#minecraft:logs`.
+- Sorts by name, count, ID or mod, in either direction.
+- Lets you pull items out with a click, or push them back with shift-click.
+- Remembers your sort preference between sessions.
 
-- 扫描附近的容器方块实体；
-- 汇总并展示附近容器中的物品；
-- 在单一界面内快速搜索和筛选；
-- 支持向容器内存入和从容器中提取物品；
-- 提供排序能力，方便整理库存；
-- 通过标签和配置控制服务器/客户端行为。
+## How to use
 
-适合用于：
+1. Press <code>`</code> (grave accent) to open the terminal. You can rebind it under
+   *Options → Controls → Key Binds → Portable Storage*.
+2. Type in the search box at the top of the terminal to narrow the list.
+3. Click the sort buttons on the left of the terminal to change the ordering.
+4. Drag the scrollbar, or scroll with the mouse wheel over the grid, to reach further items.
+5. Click an item to take a stack out of the nearby containers; shift-click to take as many as fit
+   into your inventory. Shift-click a stack in your own inventory to put it back into the
+   containers.
 
-- 基础生存存储整理；
-- 远距离搬运前的快速归档；
-- 多个箱子之间的统一管理；
-- 轻量级便携式仓储体验。
+## Server rules
 
-## 技术栈
+Server administrators can control the mod with block tags. When one of the tags below exists and
+contains at least one block, the matching rule becomes active:
 
-- Minecraft：26.2
-- Java：25
-- 框架：Fabric + Loom
-- 依赖：Fabric Loader、Fabric API
+| Tag | Effect |
+| --- | --- |
+| `portablestorage:portable_storage_disable` | Disables the whole mod |
+| `portablestorage:portable_storage_limit_range` | Caps the scan radius on the server side |
+| `portablestorage:portable_storage_disable_deposit` | Blocks depositing items |
+| `portablestorage:portable_storage_disable_extract` | Blocks taking items out |
+| `portablestorage:portable_storage_only_singleplayer` | Makes the terminal singleplayer-only |
 
-## 项目结构
+## Client config
 
-- `src/main/java/com/portablestorage`：主逻辑
-- `src/client/java/com/portablestorage`：客户端逻辑
-- `src/main/resources`：模组资源、语言文件、数据标签
-- `build.gradle`：构建配置
-- `gradle.properties`：版本与构建参数
+The client keeps its settings in `config/portable_storage_client.json`:
 
-## 主要类说明
+| Key | Meaning |
+| --- | --- |
+| `scanRadius` | How far the terminal looks for containers, from `0` to `16` |
+| `masterSwitch` | Turns the terminal off completely when `false` |
+| `blacklistBlockIds` | Block IDs that the terminal ignores, for example `minecraft:furnace` |
+| `sortConfig` | The sort order last chosen in the terminal |
 
-- `PortableStorageMod`：模组初始化入口，注册网络包和全局接收器
-- `PortableStorageClient`：客户端初始化，注册界面与按键
-- `PortableStorageMenu`：核心菜单，负责物品聚合、排序、搜索、存取和滚动
-- `ModConfig`：客户端配置保存与加载
-- `OpenTerminalPacket`：打开终端的网络包
-- `TerminalSlotClickPacket`：终端槽位点击的网络包
-- `TerminalItemsSyncPacket`：客户端与服务端同步物品列表
+## License and credits
 
-## 运行方式
+Released under the GNU Affero General Public License v3.0 (AGPL-3.0); see `LICENSE`.
 
-在项目根目录执行：
+Parts of the terminal item aggregation, container scanning and GUI layout are based on
+[Tom's Simple Storage](https://www.curseforge.com/minecraft/mc-mods/toms-storage) by tom5454,
+distributed under the MIT License. See `LICENSE` for the full notice.
 
-```bash
-./gradlew build
-```
+---
 
-如需直接在开发环境中运行：
+# 随身终端
 
-```bash
-./gradlew runClient
-```
+一个轻量的随身终端：不用逐个打开箱子，就能浏览、搜索并搬运你附近所有容器里的物品。
 
-## 服务器控制规则
+## 功能
 
-本模组支持通过数据标签控制行为，常见规则包括：
+- 扫描你周围的容器，把里面的物品汇总成一份列表；
+- 支持按物品名称或物品 ID 搜索，也支持 `#minecraft:logs` 这样的标签搜索；
+- 支持按名称、数量、ID、模组排序，可升可降；
+- 点击取出物品，Shift 点击批量取满背包；
+- 记住你上次选择的排序方式。
 
-- `portable_storage_disable`：禁用模组
-- `portable_storage_limit_range`：限制扫描范围
-- `portable_storage_disable_deposit`：禁止存入
-- `portable_storage_disable_extract`：禁止提取
-- `portable_storage_only_singleplayer`：仅单人有效
+## 使用方法
 
-这些规则可以由服务端管理员配置并控制运行行为。
+1. 按 <code>`</code>（反引号）打开终端；可在 *选项 → 控制 → 按键绑定 → 随身终端* 中改键；
+2. 在终端顶部的搜索框输入关键词筛选列表；
+3. 点击终端左侧的排序按钮切换排序方式；
+4. 拖动滚动条，或把鼠标滚轮放在物品区上滚动，查看更后面的物品；
+5. 点击物品从附近容器中取出一组，Shift 点击则尽可能多地取进背包；对背包里的物品 Shift
+   点击，可把它存回附近的容器。
 
-## 许可证说明
+## 服务器控制
 
-本项目使用 AGPL-3.0 许可证，同时代码中保留了对 Tom's Simple Storage 的引用声明。使用时请遵守项目内 LICENSE 与相关说明。
+服务器管理员可以用方块标签控制本模组。当下列某个标签存在且至少包含一个方块时，对应规则生效：
 
-## 项目维护建议
+| 标签 | 作用 |
+| --- | --- |
+| `portablestorage:portable_storage_disable` | 完全禁用本模组 |
+| `portablestorage:portable_storage_limit_range` | 在服务端限制扫描半径 |
+| `portablestorage:portable_storage_disable_deposit` | 禁止存入物品 |
+| `portablestorage:portable_storage_disable_extract` | 禁止取出物品 |
+| `portablestorage:portable_storage_only_singleplayer` | 仅在单人游戏可用 |
 
-- 修改功能时优先保留模组的轻量化设计；
-- 新增行为最好能由配置或标签控制；
-- 避免把客户端和服务端逻辑绑定得过紧；
-- 需要同步更新语言文件、配置说明和 README；
-- 发布前确认构建、运行和核心功能已验证。
+## 客户端配置
 
-## 相关文档
+客户端配置保存在 `config/portable_storage_client.json`：
 
-- 项目管理与决策记录：`项目管理与决策记录.md`
+| 键 | 含义 |
+| --- | --- |
+| `scanRadius` | 终端搜索容器的范围，取值 `0` 到 `16` |
+| `masterSwitch` | 为 `false` 时完全关闭终端 |
+| `blacklistBlockIds` | 终端忽略的方块 ID，例如 `minecraft:furnace` |
+| `sortConfig` | 上次在终端中选择的排序方式 |
+
+## 许可证与致谢
+
+本项目以 GNU Affero 通用公共许可证第 3 版（AGPL-3.0）发布，详见 `LICENSE`。
+
+终端的物品聚合、容器扫描与界面布局部分参考了 tom5454 的
+[Tom's Simple Storage](https://www.curseforge.com/minecraft/mc-mods/toms-storage)，
+该项目以 MIT 许可证发布，完整声明见 `LICENSE`。

@@ -33,25 +33,18 @@ and/or modify the software.
 improvements made in alternate versions of the program, if they
 receive widespread use, become available for other developers to
 incorporate.  Many developers of free software are heartened and
-encouraged by the resulting cooperation.  However, in the case of
-software used on network servers, this result may fail to come about.
-The GNU General Public License permits making a modified version and
-letting the public access it on a server without ever releasing its
-source code to the public.
+encouraged to make the resulting software free software as well.
 
-  The GNU Affero General Public License is designed specifically to
-ensure that, in such cases, the modified source code becomes available
-to the community.  It requires the operator of a network server to
-provide the source code of the modified version running there to the
-users of that server.  Therefore, public use of a modified version, on
-a publicly accessible server, gives the public access to the source
-code of the modified version.
+  The GNU Affero General Public License is designed for programs
+that are used on network servers.  It requires that such programs
+provide their source code to users who interact with them remotely
+through a computer network.  This is the "Affero" clause, which
+distinguishes this license from the ordinary GNU General Public License.
 
-  An older license, called the Affero General Public License and
-published by Affero, was designed to accomplish similar goals.  This is
-a different license, not a version of the Affero GPL, but Affero has
-released a new version of the Affero GPL which permits relicensing under
-this license.
+  An older license, the GNU General Public License version 2, was
+released in 1991.  We have released version 3 of the GNU Affero
+General Public License to address the needs of the modern networked
+world.
 
   The precise terms and conditions for copying, distribution and
 modification follow.

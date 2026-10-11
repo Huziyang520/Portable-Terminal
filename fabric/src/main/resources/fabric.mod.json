@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${version}",
+  "name": "${mod_name}",
+  "description": "${description}",
+  "authors": [
+    "${mod_author}"
+  ],
+  "contact": {
+    "homepage": "https://github.com/Huziyang520/Portablestorage",
+    "sources": "https://github.com/Huziyang520/Portablestorage",
+    "issues": "https://github.com/Huziyang520/Portablestorage/issues"
+  },
+  "license": "${license}",
+  "icon": "icon.png",
+  "environment": "*",
+  "accessWidener": "${mod_id}.accesswidener",
+  "entrypoints": {
+    "main": [
+      "com.portablestorage.fabric.PortableStorageFabric"
+    ],
+    "client": [
+      "com.portablestorage.fabric.PortableStorageFabricClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=${fabric_loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${fabric_minecraft_range}",
+    "java": ">=${java_version}"
+  },
+  "custom": {
+    "modmenu": {
+      "links": {
+        "modmenu.portablestorage.source": "https://github.com/Huziyang520/Portablestorage"
+      }
+    }
+  }
+}
