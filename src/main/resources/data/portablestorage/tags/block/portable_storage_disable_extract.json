@@ -1,0 +1,5 @@
+{
+  "replace": false,
+  "values": [],
+  "comment": "If this tag is present, extracting items is disabled. Place in data/portablestorage/tags/block/"
+}
