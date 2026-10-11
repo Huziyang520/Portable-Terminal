@@ -1,0 +1,14 @@
+{
+  "gui.portableterminal.title": "隨身終端",
+  "gui.portableterminal.terminal": "終端",
+  "gui.portableterminal.search_hint": "索之…",
+  "gui.portableterminal.sort.name": "名",
+  "gui.portableterminal.sort.count": "數",
+  "gui.portableterminal.sort.id": "識",
+  "gui.portableterminal.sort.mod": "模",
+  "key.portableterminal.open_terminal": "啟隨身終端",
+  "key.category.portableterminal.custom_category": "隨身儲藏",
+  "msg.portableterminal.server_disabled": "伺服已禁隨身儲藏之模。",
+  "msg.portableterminal.no_containers": "近處無器可尋",
+  "modmenu.portableterminal.source": "本源"
+}

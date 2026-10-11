@@ -1,0 +1,14 @@
+{
+  "gui.portableterminal.title": "Портативный терминал",
+  "gui.portableterminal.terminal": "Терминал",
+  "gui.portableterminal.search_hint": "Поиск...",
+  "gui.portableterminal.sort.name": "Имя",
+  "gui.portableterminal.sort.count": "Кол-во",
+  "gui.portableterminal.sort.id": "ID",
+  "gui.portableterminal.sort.mod": "Мод",
+  "key.portableterminal.open_terminal": "Открыть портативный терминал",
+  "key.category.portableterminal.custom_category": "Portable Terminal",
+  "msg.portableterminal.server_disabled": "Сервер отключил мод Portable Terminal.",
+  "msg.portableterminal.no_containers": "Рядом не найдено контейнеров",
+  "modmenu.portableterminal.source": "Исходный код"
+}

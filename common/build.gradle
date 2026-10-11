@@ -7,7 +7,7 @@ neoForge {
     neoFormVersion = neo_form_version
     // The same access transformer ships in the common resources so both the common
     // compile classpath and the NeoForge runtime see the widened members; the Fabric
-    // side mirrors every entry in portablestorage.accesswidener.
+    // side mirrors every entry in portableterminal.accesswidener.
     def at = file('src/main/resources/META-INF/accesstransformer.cfg')
     if (at.exists()) {
         accessTransformers.from(at.absolutePath)

@@ -1,0 +1,14 @@
+{
+  "gui.portableterminal.title": "随身终端",
+  "gui.portableterminal.terminal": "终端",
+  "gui.portableterminal.search_hint": "搜索...",
+  "gui.portableterminal.sort.name": "名称",
+  "gui.portableterminal.sort.count": "数量",
+  "gui.portableterminal.sort.id": "ID",
+  "gui.portableterminal.sort.mod": "模组",
+  "key.portableterminal.open_terminal": "打开随身终端",
+  "key.category.portableterminal.custom_category": "随身终端",
+  "msg.portableterminal.server_disabled": "服务器已禁用随身终端模组。",
+  "msg.portableterminal.no_containers": "附近没有找到容器",
+  "modmenu.portableterminal.source": "源码"
+}

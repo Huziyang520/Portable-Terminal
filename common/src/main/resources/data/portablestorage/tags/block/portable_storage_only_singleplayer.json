@@ -1,5 +1,0 @@
-{
-  "replace": false,
-  "values": [],
-  "comment": "If this tag is present, the mod is disabled on multiplayer servers. Place in data/portablestorage/tags/block/"
-}

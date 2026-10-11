@@ -10,8 +10,8 @@ authors="${mod_author}"
 # This branch spans 26.1 - 26.2: 26.2+ prefers iconFile, 26.1.x only knows the (now deprecated) logoFile.
 iconFile="icon.png"
 logoFile="icon.png"
-displayURL="https://github.com/Huziyang520/Portablestorage"
-issueTrackerURL="https://github.com/Huziyang520/Portablestorage/issues"
+displayURL="https://github.com/Huziyang520/Portable-Terminal"
+issueTrackerURL="https://github.com/Huziyang520/Portable-Terminal/issues"
 description='''${description}'''
 
 [[dependencies.${mod_id}]]

@@ -1,0 +1,14 @@
+{
+  "gui.portableterminal.title": "隨身終端",
+  "gui.portableterminal.terminal": "終端",
+  "gui.portableterminal.search_hint": "搜尋...",
+  "gui.portableterminal.sort.name": "名稱",
+  "gui.portableterminal.sort.count": "數量",
+  "gui.portableterminal.sort.id": "ID",
+  "gui.portableterminal.sort.mod": "模組",
+  "key.portableterminal.open_terminal": "開啟隨身終端",
+  "key.category.portableterminal.custom_category": "隨身終端",
+  "msg.portableterminal.server_disabled": "伺服器已停用隨身終端模組。",
+  "msg.portableterminal.no_containers": "附近沒有找到容器",
+  "modmenu.portableterminal.source": "原始碼"
+}

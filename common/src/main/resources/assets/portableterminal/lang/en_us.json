@@ -1,0 +1,14 @@
+{
+  "gui.portableterminal.title": "Portable Terminal",
+  "gui.portableterminal.terminal": "Terminal",
+  "gui.portableterminal.search_hint": "Search...",
+  "gui.portableterminal.sort.name": "Name",
+  "gui.portableterminal.sort.count": "Count",
+  "gui.portableterminal.sort.id": "ID",
+  "gui.portableterminal.sort.mod": "Mod",
+  "key.portableterminal.open_terminal": "Open Portable Terminal",
+  "key.category.portableterminal.custom_category": "Portable Terminal",
+  "msg.portableterminal.server_disabled": "The server has disabled the Portable Terminal mod.",
+  "msg.portableterminal.no_containers": "No containers found nearby",
+  "modmenu.portableterminal.source": "Source"
+}

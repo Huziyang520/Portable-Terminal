@@ -1,0 +1,14 @@
+{
+  "gui.portableterminal.title": "휴대용 터미널",
+  "gui.portableterminal.terminal": "터미널",
+  "gui.portableterminal.search_hint": "검색...",
+  "gui.portableterminal.sort.name": "이름",
+  "gui.portableterminal.sort.count": "개수",
+  "gui.portableterminal.sort.id": "ID",
+  "gui.portableterminal.sort.mod": "모드",
+  "key.portableterminal.open_terminal": "휴대용 터미널 열기",
+  "key.category.portableterminal.custom_category": "Portable Terminal",
+  "msg.portableterminal.server_disabled": "서버에서 Portable Terminal 모드를 비활성화했습니다.",
+  "msg.portableterminal.no_containers": "근처에 컨테이너가 없습니다",
+  "modmenu.portableterminal.source": "소스"
+}

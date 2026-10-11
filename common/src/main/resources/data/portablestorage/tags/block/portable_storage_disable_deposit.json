@@ -1,5 +1,0 @@
-{
-  "replace": false,
-  "values": [],
-  "comment": "If this tag is present, depositing items is disabled. Place in data/portablestorage/tags/block/"
-}

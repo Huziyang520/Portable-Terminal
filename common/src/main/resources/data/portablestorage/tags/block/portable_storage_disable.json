@@ -1,5 +1,0 @@
-{
-  "replace": false,
-  "values": [],
-  "comment": "If this tag contains any block, the mod will be fully disabled on the client. Place in data/portablestorage/tags/block/"
-}

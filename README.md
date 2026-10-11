@@ -1,4 +1,4 @@
-# Portable Storage
+# Portable Terminal
 
 A lightweight portable terminal that lets you browse, search and move items across every container
 near you, without opening them one by one.
@@ -14,7 +14,7 @@ near you, without opening them one by one.
 ## How to use
 
 1. Press <code>`</code> (grave accent) to open the terminal. You can rebind it under
-   *Options → Controls → Key Binds → Portable Storage*.
+   *Options → Controls → Key Binds → Portable Terminal*.
 2. Type in the search box at the top of the terminal to narrow the list.
 3. Click the sort buttons on the left of the terminal to change the ordering.
 4. Drag the scrollbar, or scroll with the mouse wheel over the grid, to reach further items.
@@ -29,15 +29,15 @@ contains at least one block, the matching rule becomes active:
 
 | Tag | Effect |
 | --- | --- |
-| `portablestorage:portable_storage_disable` | Disables the whole mod |
-| `portablestorage:portable_storage_limit_range` | Caps the scan radius on the server side |
-| `portablestorage:portable_storage_disable_deposit` | Blocks depositing items |
-| `portablestorage:portable_storage_disable_extract` | Blocks taking items out |
-| `portablestorage:portable_storage_only_singleplayer` | Makes the terminal singleplayer-only |
+| `portableterminal:portable_terminal_disable` | Disables the whole mod |
+| `portableterminal:portable_terminal_limit_range` | Caps the scan radius on the server side |
+| `portableterminal:portable_terminal_disable_deposit` | Blocks depositing items |
+| `portableterminal:portable_terminal_disable_extract` | Blocks taking items out |
+| `portableterminal:portable_terminal_only_singleplayer` | Makes the terminal singleplayer-only |
 
 ## Client config
 
-The client keeps its settings in `config/portable_storage_client.json`:
+The client keeps its settings in `config/portable_terminal_client.json`:
 
 | Key | Meaning |
 | --- | --- |
@@ -83,15 +83,15 @@ distributed under the MIT License. See `LICENSE` for the full notice.
 
 | 标签 | 作用 |
 | --- | --- |
-| `portablestorage:portable_storage_disable` | 完全禁用本模组 |
-| `portablestorage:portable_storage_limit_range` | 在服务端限制扫描半径 |
-| `portablestorage:portable_storage_disable_deposit` | 禁止存入物品 |
-| `portablestorage:portable_storage_disable_extract` | 禁止取出物品 |
-| `portablestorage:portable_storage_only_singleplayer` | 仅在单人游戏可用 |
+| `portableterminal:portable_terminal_disable` | 完全禁用本模组 |
+| `portableterminal:portable_terminal_limit_range` | 在服务端限制扫描半径 |
+| `portableterminal:portable_terminal_disable_deposit` | 禁止存入物品 |
+| `portableterminal:portable_terminal_disable_extract` | 禁止取出物品 |
+| `portableterminal:portable_terminal_only_singleplayer` | 仅在单人游戏可用 |
 
 ## 客户端配置
 
-客户端配置保存在 `config/portable_storage_client.json`：
+客户端配置保存在 `config/portable_terminal_client.json`：
 
 | 键 | 含义 |
 | --- | --- |

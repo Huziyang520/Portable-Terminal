@@ -1,0 +1,14 @@
+{
+  "gui.portableterminal.title": "ポータブル端末",
+  "gui.portableterminal.terminal": "端末",
+  "gui.portableterminal.search_hint": "検索...",
+  "gui.portableterminal.sort.name": "名前",
+  "gui.portableterminal.sort.count": "個数",
+  "gui.portableterminal.sort.id": "ID",
+  "gui.portableterminal.sort.mod": "Mod",
+  "key.portableterminal.open_terminal": "ポータブル端末を開く",
+  "key.category.portableterminal.custom_category": "Portable Terminal",
+  "msg.portableterminal.server_disabled": "サーバーが Portable Terminal を無効にしました。",
+  "msg.portableterminal.no_containers": "近くにコンテナがありません",
+  "modmenu.portableterminal.source": "ソース"
+}

@@ -8,9 +8,9 @@
     "${mod_author}"
   ],
   "contact": {
-    "homepage": "https://github.com/Huziyang520/Portablestorage",
-    "sources": "https://github.com/Huziyang520/Portablestorage",
-    "issues": "https://github.com/Huziyang520/Portablestorage/issues"
+    "homepage": "https://github.com/Huziyang520/Portable-Terminal",
+    "sources": "https://github.com/Huziyang520/Portable-Terminal",
+    "issues": "https://github.com/Huziyang520/Portable-Terminal/issues"
   },
   "license": "${license}",
   "icon": "icon.png",
@@ -18,10 +18,10 @@
   "accessWidener": "${mod_id}.accesswidener",
   "entrypoints": {
     "main": [
-      "com.portablestorage.fabric.PortableStorageFabric"
+      "com.portableterminal.fabric.PortableTerminalFabric"
     ],
     "client": [
-      "com.portablestorage.fabric.PortableStorageFabricClient"
+      "com.portableterminal.fabric.PortableTerminalFabricClient"
     ]
   },
   "depends": {
@@ -33,7 +33,7 @@
   "custom": {
     "modmenu": {
       "links": {
-        "modmenu.portablestorage.source": "https://github.com/Huziyang520/Portablestorage"
+        "modmenu.portableterminal.source": "https://github.com/Huziyang520/Portable-Terminal"
       }
     }
   }
