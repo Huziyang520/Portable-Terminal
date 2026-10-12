@@ -21,7 +21,7 @@ public class PortableTerminalFabric implements ModInitializer {
 
 		// Server side handling is shared with NeoForge, so it lives in the common packet records.
 		ServerPlayNetworking.registerGlobalReceiver(OpenTerminalPacket.TYPE,
-			(payload, context) -> OpenTerminalPacket.handleServer(context.player()));
+			(payload, context) -> OpenTerminalPacket.handleServer(context.player(), payload.rows()));
 		ServerPlayNetworking.registerGlobalReceiver(TerminalSlotClickPacket.TYPE,
 			(payload, context) -> TerminalSlotClickPacket.handleServer(context.player(), payload));
 

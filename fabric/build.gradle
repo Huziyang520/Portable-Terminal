@@ -3,10 +3,20 @@ plugins {
     id 'net.fabricmc.fabric-loom'
 }
 
+repositories {
+    // Optional integrations, compile only. Every module that compiles the common sources needs
+    // them on its own compile classpath; declaring them in common alone is not enough.
+    maven { url = 'https://maven.shedaniel.me/' }
+    maven { url = 'https://maven.terraformersmc.com/releases/' }
+}
+
 dependencies {
     minecraft("com.mojang:minecraft:${minecraft_version}")
     implementation("net.fabricmc:fabric-loader:${fabric_loader_version}")
     implementation("net.fabricmc.fabric-api:fabric-api:${fabric_version}")
+
+    compileOnly('me.shedaniel.cloth:cloth-config-fabric:26.2.155') { transitive = false }
+    compileOnly('com.terraformersmc:modmenu:20.0.3') { transitive = false }
 }
 
 loom {

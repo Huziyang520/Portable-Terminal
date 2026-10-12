@@ -3,6 +3,16 @@ plugins {
     id 'net.neoforged.moddev'
 }
 
+repositories {
+    // Optional integration, compile only. The module compiles the common sources, so it needs the
+    // Cloth Config API on its own compile classpath.
+    maven { url = 'https://maven.shedaniel.me/' }
+}
+
+dependencies {
+    compileOnly('me.shedaniel.cloth:cloth-config-neoforge:26.2.155') { transitive = false }
+}
+
 neoForge {
     version = neoforge_version
     // Automatically enable neoforge AccessTransformers if the file exists

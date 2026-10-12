@@ -2,89 +2,103 @@
 // are based on work by tom5454 (Tom's Simple Storage Mod),
 // distributed under the MIT License. See LICENSE.toms-simple-storage for details.
 package com.portableterminal.client.gui;
+
 import com.portableterminal.PortableTerminalClient;
+import com.portableterminal.config.ModConfig;
+import com.portableterminal.menu.PortableTerminalLayout;
 import com.portableterminal.menu.PortableTerminalMenu;
+import com.portableterminal.network.OpenTerminalPacket;
 import com.portableterminal.network.TerminalSlotClickPacket;
 import com.portableterminal.platform.ClientSender;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * The terminal GUI.
+ *
+ * <p>The whole panel — frame, slot wells and the scrollbar track — comes from a baked sprite
+ * ({@code terminal/rows_N}), one sprite per supported row count. The sprite's four corners are
+ * literal copies of vanilla's {@code generic_54.png} corners, so the rounded corners match
+ * containers exactly, and slot cells are vanilla's own {@code container/slot.png}. Nothing is drawn
+ * from raw rectangles any more, which is also what removes the stray grey block that used to
+ * stick out past the slot grid.</p>
+ */
 public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerminalMenu> {
 
-	// 布局常量
-	private static final int PADDING = PortableTerminalMenu.PADDING;
-	private static final int SLOT_SIZE = PortableTerminalMenu.SLOT_SIZE;
-	private static final int COLS = PortableTerminalMenu.COLS;
-	private static final int TERMINAL_ROWS = PortableTerminalMenu.TERMINAL_ROWS;
+	private static final int COLS = PortableTerminalLayout.COLS;
+	private static final int SLOT_SIZE = PortableTerminalLayout.SLOT_SIZE;
+	private static final int TERM_LEFT = PortableTerminalLayout.TERM_LEFT;
+	private static final int TERM_TOP = PortableTerminalLayout.TERM_TOP;
+	private static final int INV_LEFT = PortableTerminalLayout.INV_LEFT;
+	private static final int SCROLLBAR_LEFT = PortableTerminalLayout.SCROLLBAR_LEFT;
+	private static final int SCROLLBAR_WIDTH = PortableTerminalLayout.SCROLLBAR_WIDTH;
+	private static final int SCROLLBAR_TOP = PortableTerminalLayout.SCROLLBAR_TOP;
+	private static final int SCROLL_THUMB_MIN = PortableTerminalLayout.SCROLL_THUMB_MIN;
 
-	private static final int TERM_LEFT = PortableTerminalMenu.TERM_LEFT;
-	private static final int TERM_TOP = PortableTerminalMenu.TERM_TOP;
-	private static final int INV_LEFT = PortableTerminalMenu.INV_LEFT;
-	private static final int INV_TOP = PortableTerminalMenu.INV_TOP;
-	private static final int HOTBAR_TOP = PortableTerminalMenu.HOTBAR_TOP;
+	private static final int SEARCH_X = PortableTerminalLayout.SEARCH_X;
+	private static final int SEARCH_Y = PortableTerminalLayout.SEARCH_Y;
+	private static final int SEARCH_WIDTH = PortableTerminalLayout.SEARCH_WIDTH;
+	private static final int SEARCH_HEIGHT = PortableTerminalLayout.SEARCH_HEIGHT;
 
-	private static final int GUI_WIDTH = PortableTerminalMenu.IMAGE_WIDTH;
-	private static final int GUI_HEIGHT = PortableTerminalMenu.IMAGE_HEIGHT;
+	private static final int SORT_BTN_X = PortableTerminalLayout.SORT_BTN_X;
+	private static final int SORT_BTN_Y = PortableTerminalLayout.SORT_BTN_Y;
+	private static final int SORT_BTN_W = PortableTerminalLayout.SORT_BTN_W;
+	private static final int SORT_BTN_H = PortableTerminalLayout.SORT_BTN_H;
+	private static final int SORT_BTN_GAP = PortableTerminalLayout.SORT_BTN_GAP;
+	private static final int ROWS_BTN_Y = PortableTerminalLayout.ROWS_BTN_Y;
 
-	private static final int OFFHAND_X = PortableTerminalMenu.OFFHAND_X;
-	private static final int OFFHAND_Y = PortableTerminalMenu.OFFHAND_Y;
-
-	private static final int SCROLLBAR_LEFT = PortableTerminalMenu.SCROLLBAR_LEFT;
-	private static final int SCROLLBAR_WIDTH = PortableTerminalMenu.SCROLLBAR_WIDTH;
-	private static final int SCROLLBAR_TOP = TERM_TOP - 1;
-	private static final int SCROLLBAR_HEIGHT = TERMINAL_ROWS * SLOT_SIZE + 2;
-	private static final int SCROLL_THUMB_MIN = 8;
-
-	private static final int SEARCH_X = TERM_LEFT;
-	private static final int SEARCH_Y = 15;
-	private static final int SEARCH_WIDTH = COLS * SLOT_SIZE;
-	private static final int SEARCH_HEIGHT = 12;
-
-	private static final int SORT_BTN_X = -46;
-	private static final int SORT_BTN_Y = TERM_TOP;
-	private static final int SORT_BTN_W = 42;
-	private static final int SORT_BTN_H = 14;
-	private static final int SORT_BTN_GAP = 2;
-
-	// 配色
-	private static final int COL_PANEL_BG      = 0xFFC6C6C6;
-	private static final int COL_BORDER_DARK   = 0xFF373737;
-	private static final int COL_BORDER_LIGHT  = 0xFFFFFFFF;
-	private static final int COL_SLOT_BG       = 0xFF8B8B8B;
-	private static final int COL_SLOT_DARK     = 0xFF373737;
-	private static final int COL_SLOT_LIGHT    = 0xFFFFFFFF;
-	private static final int COL_TERM_AREA_BG  = 0xFF9E9E9E;
 	private static final int COL_SCROLL_BG     = 0xFF000000;
 	private static final int COL_SCROLL_THUMB  = 0xFFC6C6C6;
 	private static final int COL_SCROLL_THUMB2 = 0xFF808080;
 	private static final int COL_TEXT          = 0xFF404040;
 
+	private final int rows;
+	private final int guiWidth;
+	private final int guiHeight;
+
 	private EditBox searchBox;
 	private String lastSearchText = "";
 	private boolean draggingScrollbar = false;
+	/** Shift + left button drag over the terminal slots: quick move every slot entered. */
+	private boolean draggingQuickMove = false;
+	private int lastQuickMoveSlot = -1;
+
 	// 滚动条状态缓存：仅在用户主动滚动时更新，数据同步不触发重算，彻底避免闪烁
-	private int cachedTotalRows = TERMINAL_ROWS;
-	private int cachedScrollOffset = 0;
-	private int cachedMaxScroll = 0;
+	private int cachedTotalRows;
+	private int cachedScrollOffset;
+	private int cachedMaxScroll;
 	private boolean scrollbarDirty = true;
 
+	private final List<Button> sortButtons = new ArrayList<>();
+	private Button rowsButton;
+
 	public PortableTerminalScreen(PortableTerminalMenu menu, Inventory playerInventory, Component title) {
-		super(menu, playerInventory, title, GUI_WIDTH, GUI_HEIGHT);
-		this.titleLabelX = PADDING;
+		super(menu, playerInventory, title,
+			PortableTerminalLayout.IMAGE_WIDTH, PortableTerminalLayout.imageHeight(menu.getRows()));
+		this.rows = menu.getRows();
+		this.guiWidth = PortableTerminalLayout.IMAGE_WIDTH;
+		this.guiHeight = PortableTerminalLayout.imageHeight(this.rows);
+		this.cachedTotalRows = this.rows;
+		this.titleLabelX = PortableTerminalLayout.PADDING;
 		this.titleLabelY = 5;
-		this.inventoryLabelX = PADDING;
-		this.inventoryLabelY = INV_TOP - 11;
+		this.inventoryLabelX = PortableTerminalLayout.PADDING;
+		this.inventoryLabelY = PortableTerminalLayout.invTop(this.rows) - 11;
 	}
+
+	// ==================== 初始化 ====================
 
 	@Override
 	protected void init() {
@@ -107,7 +121,72 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		this.searchBox.setResponder(this::onSearchChanged);
 		this.addRenderableWidget(this.searchBox);
 
+		createButtons();
 		this.menu.updateTerminalSlots();
+	}
+
+	/** 左侧控件全部用原版 Button：自带点击音效与禁用态贴图。 */
+	private void createButtons() {
+		sortButtons.clear();
+		int count = this.menu.getSortCount();
+		for (int i = 0; i < count; i++) {
+			final int index = i;
+			Button button = Button.builder(
+					sortButtonLabel(i),
+					b -> cycleSort(index))
+				.bounds(this.leftPos + SORT_BTN_X,
+					this.topPos + SORT_BTN_Y + i * (SORT_BTN_H + SORT_BTN_GAP),
+					SORT_BTN_W, SORT_BTN_H)
+				.build();
+			button.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+				Component.translatable("gui.portableterminal.sort.tooltip")));
+			sortButtons.add(button);
+			this.addRenderableWidget(button);
+		}
+
+		rowsButton = Button.builder(
+				Component.translatable("gui.portableterminal.rows", this.rows),
+				b -> cycleRows())
+			.bounds(this.leftPos + SORT_BTN_X, this.topPos + ROWS_BTN_Y, SORT_BTN_W, SORT_BTN_H)
+			.build();
+		rowsButton.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+			Component.translatable("gui.portableterminal.rows.tooltip")));
+		this.addRenderableWidget(rowsButton);
+
+		refreshSortButtons();
+	}
+
+	/** 选中的那一项显示为原版禁用态（置灰），但仍然可以点击以切换升序/降序。 */
+	private void refreshSortButtons() {
+		for (int i = 0; i < sortButtons.size(); i++) {
+			Button button = sortButtons.get(i);
+			button.setMessage(sortButtonLabel(i));
+			button.active = this.menu.getSortDir(i) == PortableTerminalMenu.SortDirection.NONE;
+		}
+	}
+
+	private Component sortButtonLabel(int index) {
+		String arrow = switch (this.menu.getSortDir(index)) {
+			case NONE -> "";
+			case ASC -> " ^";
+			case DESC -> " v";
+		};
+		return Component.literal(this.menu.getSortName(index).getString() + arrow);
+	}
+
+	private void cycleSort(int index) {
+		this.menu.cycleSortDir(index);
+		refreshSortButtons();
+	}
+
+	/** 切换显示行数：写进配置并重新开一次终端，服务端据此重建菜单。 */
+	private void cycleRows() {
+		int next = this.rows >= PortableTerminalLayout.MAX_ROWS
+			? PortableTerminalLayout.MIN_ROWS
+			: this.rows + 1;
+		ModConfig.terminalRows = next;
+		ModConfig.save();
+		ClientSender.sendToServer(new OpenTerminalPacket(next));
 	}
 
 	private void onItemsSynced(List<ItemStack> items) {
@@ -125,8 +204,6 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		super.onClose();
 	}
 
-	// 键盘处理
-
 	@Override
 	public boolean keyPressed(KeyEvent event) {
 		if (this.searchBox != null && this.getFocused() == this.searchBox) {
@@ -141,92 +218,42 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		return super.keyPressed(event);
 	}
 
-	// 纯代码绘制的背景
+	// ==================== 背景：整块贴图 ====================
 
 	@Override
 	public void extractBackground(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
-		int x = this.leftPos;
-		int y = this.topPos;
+		// 面板 + 全部槽位（含滚动条轨道）都在贴图里，见类注释
+		gfx.blit(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.panelSprite(this.rows),
+			this.leftPos, this.topPos, 0f, 0f, this.guiWidth, this.guiHeight, this.guiWidth, this.guiHeight);
 
-		drawPanel(gfx, x, y, GUI_WIDTH, GUI_HEIGHT);
+		// 副手槽在面板之外，单独贴一次槽位贴图
+		gfx.blit(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.SLOT_SPRITE,
+			this.leftPos + PortableTerminalLayout.OFFHAND_X - 1,
+			this.topPos + PortableTerminalLayout.offhandY(this.rows) - 1,
+			0f, 0f, SLOT_SIZE, SLOT_SIZE, SLOT_SIZE, SLOT_SIZE);
 
-		gfx.fill(x + TERM_LEFT - 2, y + TERM_TOP - 2,
-			x + TERM_LEFT + COLS * SLOT_SIZE + 2, y + TERM_TOP + TERMINAL_ROWS * SLOT_SIZE + 2,
-			COL_TERM_AREA_BG);
-
-		for (int row = 0; row < TERMINAL_ROWS; row++) {
-			for (int col = 0; col < COLS; col++) {
-				drawSlot(gfx, x + TERM_LEFT + col * SLOT_SIZE, y + TERM_TOP + row * SLOT_SIZE);
-			}
-		}
-
-		for (int row = 0; row < 3; row++) {
-			for (int col = 0; col < 9; col++) {
-				drawSlot(gfx, x + INV_LEFT + col * SLOT_SIZE, y + INV_TOP + row * SLOT_SIZE);
-			}
-		}
-
-		for (int col = 0; col < 9; col++) {
-			drawSlot(gfx, x + INV_LEFT + col * SLOT_SIZE, y + HOTBAR_TOP);
-		}
-
-		drawPanel(gfx, x + OFFHAND_X - 5, y + OFFHAND_Y - 5, SLOT_SIZE + 8, SLOT_SIZE + 8);
-		drawSlot(gfx, x + OFFHAND_X, y + OFFHAND_Y);
-
-		drawScrollbar(gfx, x, y);
-
-		drawSortButton(gfx, x, y, mouseX, mouseY);
+		drawScrollbarThumb(gfx);
 	}
 
-	/** 原版风格面板：亮左上边、暗右下边、灰色填充 */
-	private void drawPanel(GuiGraphicsExtractor gfx, int x, int y, int w, int h) {
-		gfx.fill(x, y, x + w, y + h, COL_BORDER_DARK);
-		gfx.fill(x + 1, y + 1, x + w - 1, y + 2, COL_BORDER_LIGHT);
-		gfx.fill(x + 1, y + 1, x + 2, y + h - 1, COL_BORDER_LIGHT);
-		gfx.fill(x + 2, y + 2, x + w - 2, y + h - 2, COL_PANEL_BG);
-		gfx.fill(x + w - 2, y + 2, x + w - 1, y + h - 1, 0xFF555555);
-		gfx.fill(x + 2, y + h - 2, x + w - 1, y + h - 1, 0xFF555555);
-	}
+	private void drawScrollbarThumb(GuiGraphicsExtractor gfx) {
+		int sx = this.leftPos + SCROLLBAR_LEFT;
+		int sy = this.topPos + SCROLLBAR_TOP;
+		int trackHeight = PortableTerminalLayout.scrollbarHeight(this.rows);
 
-	/** 原版风格 18x18 槽位：左上暗边、右下亮边、灰底。传入坐标为 16x16 物品区左上角 */
-	private void drawSlot(GuiGraphicsExtractor gfx, int ix, int iy) {
-		int x = ix - 1;
-		int y = iy - 1;
-		gfx.fill(x, y, x + SLOT_SIZE, y + 1, COL_SLOT_DARK);
-		gfx.fill(x, y, x + 1, y + SLOT_SIZE, COL_SLOT_DARK);
-		gfx.fill(x + SLOT_SIZE - 1, y + 1, x + SLOT_SIZE, y + SLOT_SIZE, COL_SLOT_LIGHT);
-		gfx.fill(x + 1, y + SLOT_SIZE - 1, x + SLOT_SIZE, y + SLOT_SIZE, COL_SLOT_LIGHT);
-		gfx.fill(x + 1, y + 1, x + SLOT_SIZE - 1, y + SLOT_SIZE - 1, COL_SLOT_BG);
-	}
-
-	private void drawScrollbar(GuiGraphicsExtractor gfx, int guiX, int guiY) {
-		int sx = guiX + SCROLLBAR_LEFT;
-		int sy = guiY + SCROLLBAR_TOP;
-
-		gfx.fill(sx, sy, sx + SCROLLBAR_WIDTH, sy + SCROLLBAR_HEIGHT, COL_SCROLL_BG);
-		gfx.fill(sx + 1, sy + 1, sx + SCROLLBAR_WIDTH - 1, sy + SCROLLBAR_HEIGHT - 1, 0xFF2B2B2B);
-
-		// 仅在用户滚动（scrollbarDirty=true）时更新缓存，数据同步不触发，避免闪烁
 		if (scrollbarDirty) {
-			int rows = Math.max(this.menu.getTotalRows(), TERMINAL_ROWS);
-			int off = this.menu.getScrollOffset();
-			int max = this.menu.getMaxScroll();
-			if (rows != cachedTotalRows || off != cachedScrollOffset || max != cachedMaxScroll) {
-				cachedTotalRows = rows;
-				cachedScrollOffset = off;
-				cachedMaxScroll = max;
-			}
+			cachedTotalRows = Math.max(this.menu.getTotalRows(), this.rows);
+			cachedScrollOffset = this.menu.getScrollOffset();
+			cachedMaxScroll = this.menu.getMaxScroll();
 			scrollbarDirty = false;
 		}
 
-		int trackH = SCROLLBAR_HEIGHT - 2;
-		int thumbH = Math.max(SCROLL_THUMB_MIN, trackH * TERMINAL_ROWS / cachedTotalRows);
+		int inner = trackHeight - 2;
+		int thumbH = Math.max(SCROLL_THUMB_MIN, inner * this.rows / Math.max(1, cachedTotalRows));
 		int thumbY = sy + 1;
 		if (cachedMaxScroll > 0) {
-			int trackH2 = SCROLLBAR_HEIGHT - 2 - thumbH;
-			thumbY = sy + 1 + trackH2 * cachedScrollOffset / cachedMaxScroll;
+			thumbY = sy + 1 + (inner - thumbH) * cachedScrollOffset / cachedMaxScroll;
 		}
-		int thumbColor = (cachedMaxScroll > 0) ? COL_SCROLL_THUMB : 0xFF555555;
+		int thumbColor = cachedMaxScroll > 0 ? COL_SCROLL_THUMB : 0xFF555555;
 		gfx.fill(sx + 1, thumbY, sx + SCROLLBAR_WIDTH - 1, thumbY + thumbH, thumbColor);
 		if (cachedMaxScroll > 0) {
 			gfx.fill(sx + SCROLLBAR_WIDTH - 2, thumbY, sx + SCROLLBAR_WIDTH - 1, thumbY + thumbH, COL_SCROLL_THUMB2);
@@ -234,48 +261,13 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		}
 	}
 
-	private void drawSortButton(GuiGraphicsExtractor gfx, int guiX, int guiY, int mouseX, int mouseY) {
-		int count = this.menu.getSortCount();
-		for (int i = 0; i < count; i++) {
-			int x = guiX + SORT_BTN_X;
-			int y = guiY + SORT_BTN_Y + i * (SORT_BTN_H + SORT_BTN_GAP);
-			drawPanel(gfx, x - 1, y - 1, SORT_BTN_W + 2, SORT_BTN_H + 2);
-			if (mouseX >= x && mouseX < x + SORT_BTN_W && mouseY >= y && mouseY < y + SORT_BTN_H) {
-				gfx.fill(x - 1, y - 1, x + SORT_BTN_W + 1, y + SORT_BTN_H + 1, 0x60FFFFFF);
-			}
-			String name = this.menu.getSortName(i).getString();
-			String arrow = switch (this.menu.getSortDir(i)) {
-				case NONE -> "";
-				case ASC -> " ^";
-				case DESC -> " v";
-			};
-			String text = name + arrow;
-			int textX = x + (SORT_BTN_W - this.font.width(text)) / 2;
-			gfx.text(this.font, text, textX, y + 3, COL_TEXT, false);
-		}
-	}
-
-	private int getThumbHeight() {
-		int totalRows = Math.max(this.menu.getTotalRows(), TERMINAL_ROWS);
-		int trackH = SCROLLBAR_HEIGHT - 2;
-		return Math.max(SCROLL_THUMB_MIN, trackH * TERMINAL_ROWS / totalRows);
-	}
-
-	private int getThumbOffset(int maxScroll, int thumbH) {
-		if (maxScroll <= 0) return 0;
-		int trackH = SCROLLBAR_HEIGHT - 2 - thumbH;
-		return trackH * this.menu.getScrollOffset() / maxScroll;
-	}
-
 	@Override
 	public void extractLabels(GuiGraphicsExtractor gfx, int mouseX, int mouseY) {
-		gfx.text(this.font, this.title,
-			this.titleLabelX, this.titleLabelY, COL_TEXT, false);
-		gfx.text(this.font, this.playerInventoryTitle,
-			this.inventoryLabelX, this.inventoryLabelY, COL_TEXT, false);
+		gfx.text(this.font, this.title, this.titleLabelX, this.titleLabelY, COL_TEXT, false);
+		gfx.text(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, COL_TEXT, false);
 	}
 
-	// 终端槽位自定义渲染
+	// ==================== 终端槽位自定义渲染 ====================
 
 	@Override
 	protected void extractSlot(GuiGraphicsExtractor gfx, Slot slot, int mouseX, int mouseY) {
@@ -288,8 +280,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 				gfx.item(itemStack, x, y, seed);
 				int count = itemStack.getCount();
 				if (count != 1) {
-					String countText = formatCount(count);
-					drawScaledCount(gfx, countText, x, y);
+					drawScaledCount(gfx, formatCount(count), x, y);
 				}
 			}
 		} else {
@@ -322,7 +313,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		gfx.pose().popMatrix();
 	}
 
-	// 鼠标交互
+	// ==================== 鼠标交互 ====================
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean inside) {
@@ -343,10 +334,15 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			this.setFocused(null);
 		}
 
-		int sortIdx = getClickedSortButton(mouseX, mouseY);
-		if (sortIdx >= 0 && button == 0) {
-			this.menu.cycleSortDir(sortIdx);
-			return true;
+		// 排序按钮：选中的那个 active=false（显示为禁用态），在交给原版控件之前先处理，
+		// 这样「外观置灰」不会把「点击切换升降序」一起吃掉。
+		if (button == 0) {
+			int sortIdx = getClickedSortButton(mouseX, mouseY);
+			if (sortIdx >= 0) {
+				cycleSort(sortIdx);
+				playButtonClick();
+				return true;
+			}
 		}
 
 		if (isInScrollbar(mouseX, mouseY) && button == 0) {
@@ -356,6 +352,14 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		}
 
 		int hoveredSlot = getHoveredTerminalSlot((int) mouseX, (int) mouseY);
+		if (hoveredSlot >= 0 && button == 0 && hasShift) {
+			// shift + 左键：进入拖拽快速转移模式（每滑过一格转移一组）
+			draggingQuickMove = true;
+			lastQuickMoveSlot = -1;
+			quickMoveHoveredSlot((int) mouseX, (int) mouseY);
+			return true;
+		}
+
 		if (hoveredSlot >= 0) {
 			ItemStack carried = this.menu.getCarried();
 			if (button != 2 && !carried.isEmpty()) {
@@ -368,7 +372,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 				return true;
 			}
 
-			net.minecraft.resources.Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(shown.getItem());
+			net.minecraft.resources.Identifier itemId =
+				net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(shown.getItem());
 			ClientSender.sendToServer(new TerminalSlotClickPacket(itemId, button, hasShift));
 			return true;
 		}
@@ -376,10 +381,36 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		return super.mouseClicked(event, inside);
 	}
 
+	/** 触发一次「受击槽位 → 玩家背包」的整组转移；同一格只触发一次。 */
+	private void quickMoveHoveredSlot(int mouseX, int mouseY) {
+		int slotIndex = getHoveredTerminalSlot(mouseX, mouseY);
+		if (slotIndex < 0 || slotIndex == lastQuickMoveSlot) {
+			return;
+		}
+		lastQuickMoveSlot = slotIndex;
+		ItemStack shown = this.menu.getTerminalSlots().get(slotIndex).getItem();
+		if (shown.isEmpty()) {
+			return;
+		}
+		net.minecraft.resources.Identifier itemId =
+			net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(shown.getItem());
+		ClientSender.sendToServer(new TerminalSlotClickPacket(itemId, 0, true));
+	}
+
+	private void playButtonClick() {
+		net.minecraft.client.Minecraft.getInstance().getSoundManager().play(
+			net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+				net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
+	}
+
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
 		if (draggingScrollbar) {
 			scrollToMouse(event.y());
+			return true;
+		}
+		if (draggingQuickMove) {
+			quickMoveHoveredSlot((int) event.x(), (int) event.y());
 			return true;
 		}
 		return super.mouseDragged(event, dragX, dragY);
@@ -391,6 +422,11 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			draggingScrollbar = false;
 			return true;
 		}
+		if (draggingQuickMove) {
+			draggingQuickMove = false;
+			lastQuickMoveSlot = -1;
+			return true;
+		}
 		return super.mouseReleased(event);
 	}
 
@@ -398,12 +434,13 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		scrollbarDirty = true;
 		int maxScroll = this.menu.getMaxScroll();
 		if (maxScroll <= 0) return;
-		int thumbH = getThumbHeight();
+		int trackHeight = PortableTerminalLayout.scrollbarHeight(this.rows);
+		int inner = trackHeight - 2;
+		int thumbH = Math.max(SCROLL_THUMB_MIN,
+			inner * this.rows / Math.max(1, Math.max(this.menu.getTotalRows(), this.rows)));
 		int trackTop = this.topPos + SCROLLBAR_TOP + 1 + thumbH / 2;
-		int trackH = SCROLLBAR_HEIGHT - 2 - thumbH;
-		double ratio = (mouseY - trackTop) / (double) trackH;
-		int offset = (int) Math.round(ratio * maxScroll);
-		this.menu.setScrollOffset(offset);
+		double ratio = (mouseY - trackTop) / (double) (inner - thumbH);
+		this.menu.setScrollOffset((int) Math.round(ratio * maxScroll));
 	}
 
 	private boolean isInSearchBox(double mouseX, double mouseY) {
@@ -415,15 +452,15 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private boolean isInScrollbar(double mouseX, double mouseY) {
 		int x = this.leftPos + SCROLLBAR_LEFT;
 		int y = this.topPos + SCROLLBAR_TOP;
-		return mouseX >= x && mouseX < x + SCROLLBAR_WIDTH && mouseY >= y && mouseY < y + SCROLLBAR_HEIGHT;
+		return mouseX >= x && mouseX < x + SCROLLBAR_WIDTH
+			&& mouseY >= y && mouseY < y + PortableTerminalLayout.scrollbarHeight(this.rows);
 	}
 
 	/** 返回点击到的排序按钮索引（0..count-1），未命中返回 -1 */
 	private int getClickedSortButton(double mouseX, double mouseY) {
 		int x = this.leftPos + SORT_BTN_X;
 		if (mouseX < x || mouseX >= x + SORT_BTN_W) return -1;
-		int count = this.menu.getSortCount();
-		for (int i = 0; i < count; i++) {
+		for (int i = 0; i < this.menu.getSortCount(); i++) {
 			int y = this.topPos + SORT_BTN_Y + i * (SORT_BTN_H + SORT_BTN_GAP);
 			if (mouseY >= y && mouseY < y + SORT_BTN_H) return i;
 		}
@@ -433,15 +470,13 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private int getHoveredTerminalSlot(int mouseX, int mouseY) {
 		int termX = this.leftPos + TERM_LEFT;
 		int termY = this.topPos + TERM_TOP;
-		int termW = COLS * SLOT_SIZE;
-		int termH = TERMINAL_ROWS * SLOT_SIZE;
-
-		if (mouseX < termX || mouseX >= termX + termW || mouseY < termY || mouseY >= termY + termH) {
+		if (mouseX < termX || mouseX >= termX + COLS * SLOT_SIZE
+			|| mouseY < termY || mouseY >= termY + this.rows * SLOT_SIZE) {
 			return -1;
 		}
 		int col = (mouseX - termX) / SLOT_SIZE;
 		int row = (mouseY - termY) / SLOT_SIZE;
-		if (col < 0 || col >= COLS || row < 0 || row >= TERMINAL_ROWS) {
+		if (col < 0 || col >= COLS || row < 0 || row >= this.rows) {
 			return -1;
 		}
 		return row * COLS + col;
@@ -452,7 +487,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		int termX = this.leftPos + TERM_LEFT;
 		int termY = this.topPos + TERM_TOP;
 		int termW = COLS * SLOT_SIZE + SCROLLBAR_WIDTH + 4;
-		int termH = TERMINAL_ROWS * SLOT_SIZE;
+		int termH = this.rows * SLOT_SIZE;
 
 		if (mouseX >= termX && mouseX < termX + termW && mouseY >= termY && mouseY < termY + termH) {
 			scrollbarDirty = true;
@@ -466,5 +501,4 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		}
 		return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
 	}
-
 }

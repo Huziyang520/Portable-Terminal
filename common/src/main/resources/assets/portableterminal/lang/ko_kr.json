@@ -10,5 +10,18 @@
   "key.category.portableterminal.custom_category": "Portable Terminal",
   "msg.portableterminal.server_disabled": "서버에서 Portable Terminal 모드를 비활성화했습니다.",
   "msg.portableterminal.no_containers": "근처에 컨테이너가 없습니다",
-  "modmenu.portableterminal.source": "소스"
+  "modmenu.portableterminal.source": "소스",
+  "gui.portableterminal.sort.tooltip": "클릭하여 전환: 끔 -> 오름차순 -> 내림차순",
+  "gui.portableterminal.rows": "행: %s",
+  "gui.portableterminal.rows.tooltip": "터미널에 표시할 행 수 변경",
+  "config.portableterminal.title": "휴대용 터미널",
+  "config.portableterminal.category.general": "일반",
+  "config.portableterminal.master_switch": "터미널 사용",
+  "config.portableterminal.master_switch.tooltip": "끄면 이 클라이언트에서 모드 전체가 비활성화됩니다",
+  "config.portableterminal.scan_radius": "컨테이너 탐색 범위",
+  "config.portableterminal.scan_radius.tooltip": "터미널이 컨테이너를 찾는 범위 (0-16)",
+  "config.portableterminal.terminal_rows": "터미널 표시 행 수",
+  "config.portableterminal.terminal_rows.tooltip": "터미널에 표시할 행 수 (3-6)",
+  "config.portableterminal.blacklist": "무시할 블록",
+  "config.portableterminal.blacklist.tooltip": "터미널이 무시할 블록 ID, 예: minecraft:furnace"
 }

@@ -1,6 +1,7 @@
 package com.portableterminal.menu;
 
 import com.portableterminal.PortableTerminalMod;
+import com.portableterminal.config.ModConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.flag.FeatureFlags;
@@ -16,6 +17,10 @@ import java.util.List;
  * constructor) throws {@code IllegalStateException} — which surfaces as a bare
  * {@code ExceptionInInitializerError} and stops the whole mod from loading. Each loader therefore
  * calls {@link #create()} and registers the result from its own registration phase.</p>
+ *
+ * <p>The client builds its copy of the menu from its own {@code terminalRows} setting — exactly the
+ * value carried by {@code OpenTerminalPacket} to the server — so both sides always agree on the
+ * slot layout.</p>
  */
 public final class ModMenuTypes {
 
@@ -30,7 +35,7 @@ public final class ModMenuTypes {
 	public static MenuType<PortableTerminalMenu> create() {
 		return new MenuType<>((containerId, inventory) -> {
 			List<BlockPos> positions = PortableTerminalMenu.takePendingPositions(inventory.player.getUUID());
-			return new PortableTerminalMenu(containerId, inventory, positions);
+			return new PortableTerminalMenu(containerId, inventory, positions, ModConfig.terminalRows);
 		}, FeatureFlags.VANILLA_SET);
 	}
 

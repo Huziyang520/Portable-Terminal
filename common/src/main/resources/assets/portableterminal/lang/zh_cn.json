@@ -10,5 +10,18 @@
   "key.category.portableterminal.custom_category": "随身终端",
   "msg.portableterminal.server_disabled": "服务器已禁用随身终端模组。",
   "msg.portableterminal.no_containers": "附近没有找到容器",
-  "modmenu.portableterminal.source": "源码"
+  "modmenu.portableterminal.source": "源码",
+  "gui.portableterminal.sort.tooltip": "点击切换：关闭 → 升序 → 降序",
+  "gui.portableterminal.rows": "行数：%s",
+  "gui.portableterminal.rows.tooltip": "调整终端显示的行数",
+  "config.portableterminal.title": "随身终端",
+  "config.portableterminal.category.general": "通用",
+  "config.portableterminal.master_switch": "启用终端",
+  "config.portableterminal.master_switch.tooltip": "关闭后本客户端完全禁用该模组",
+  "config.portableterminal.scan_radius": "容器扫描半径",
+  "config.portableterminal.scan_radius.tooltip": "终端搜索容器的范围（0-16）",
+  "config.portableterminal.terminal_rows": "终端显示行数",
+  "config.portableterminal.terminal_rows.tooltip": "终端显示的行数（3-6）",
+  "config.portableterminal.blacklist": "忽略的方块",
+  "config.portableterminal.blacklist.tooltip": "终端忽略的方块 ID，例如 minecraft:furnace"
 }

@@ -10,5 +10,18 @@
   "key.category.portableterminal.custom_category": "隨身終端",
   "msg.portableterminal.server_disabled": "伺服器已停用隨身終端模組。",
   "msg.portableterminal.no_containers": "附近搵唔到容器",
-  "modmenu.portableterminal.source": "原始碼"
+  "modmenu.portableterminal.source": "原始碼",
+  "gui.portableterminal.sort.tooltip": "點擊切換：關閉 → 升序 → 降序",
+  "gui.portableterminal.rows": "行數：%s",
+  "gui.portableterminal.rows.tooltip": "調整終端顯示嘅行數",
+  "config.portableterminal.title": "隨身終端",
+  "config.portableterminal.category.general": "一般",
+  "config.portableterminal.master_switch": "啟用終端",
+  "config.portableterminal.master_switch.tooltip": "熄咗就會喺本機完全停用呢個模組",
+  "config.portableterminal.scan_radius": "容器掃描半徑",
+  "config.portableterminal.scan_radius.tooltip": "終端搜尋容器嘅範圍（0-16）",
+  "config.portableterminal.terminal_rows": "終端顯示行數",
+  "config.portableterminal.terminal_rows.tooltip": "終端顯示嘅行數（3-6）",
+  "config.portableterminal.blacklist": "忽略嘅方塊",
+  "config.portableterminal.blacklist.tooltip": "終端忽略嘅方塊 ID，例如 minecraft:furnace"
 }

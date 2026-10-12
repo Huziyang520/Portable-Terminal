@@ -7,6 +7,7 @@ package com.portableterminal.menu;
 import com.portableterminal.config.ModConfig;
 import com.portableterminal.network.TerminalItemsSyncPacket;
 import com.portableterminal.platform.Services;
+import com.portableterminal.util.PinyinSearch;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -34,23 +35,20 @@ import java.util.UUID;
 
 public class PortableTerminalMenu extends AbstractContainerMenu {
 
-	public static final int PADDING = 7;
-	public static final int SLOT_SIZE = 18;
-	public static final int COLS = 9;
-	public static final int TERMINAL_ROWS = 4;
-	public static final int TERMINAL_SLOT_COUNT = COLS * TERMINAL_ROWS;
-	// 槽位坐标为 16x16 物品区左上角（遵循原版 +1 约定）
-	public static final int TERM_LEFT = PADDING + 1;
-	public static final int TERM_TOP = 32;
-	public static final int INV_LEFT = PADDING + 1;
-	public static final int INV_TOP = TERM_TOP + TERMINAL_ROWS * SLOT_SIZE + 14;
-	public static final int HOTBAR_TOP = INV_TOP + 3 * SLOT_SIZE + 4;
-	public static final int SCROLLBAR_LEFT = TERM_LEFT + COLS * SLOT_SIZE + 3;
-	public static final int SCROLLBAR_WIDTH = 12;
-	public static final int IMAGE_WIDTH = SCROLLBAR_LEFT + SCROLLBAR_WIDTH + 8;
-	public static final int IMAGE_HEIGHT = HOTBAR_TOP + SLOT_SIZE + PADDING;
-	public static final int OFFHAND_X = -22;
-	public static final int OFFHAND_Y = HOTBAR_TOP;
+	// 槽位坐标为 16x16 物品区左上角（遵循原版 +1 约定）。
+	// 所有随行数变化的值一律走 PortableTerminalLayout，保证「菜单槽位 / 界面尺寸 / 贴图」三者永远一致。
+	public static final int PADDING = PortableTerminalLayout.PADDING;
+	public static final int SLOT_SIZE = PortableTerminalLayout.SLOT_SIZE;
+	public static final int COLS = PortableTerminalLayout.COLS;
+	public static final int TERM_LEFT = PortableTerminalLayout.TERM_LEFT;
+	public static final int TERM_TOP = PortableTerminalLayout.TERM_TOP;
+	public static final int INV_LEFT = PortableTerminalLayout.INV_LEFT;
+	public static final int SCROLLBAR_LEFT = PortableTerminalLayout.SCROLLBAR_LEFT;
+	public static final int SCROLLBAR_WIDTH = PortableTerminalLayout.SCROLLBAR_WIDTH;
+	public static final int OFFHAND_X = PortableTerminalLayout.OFFHAND_X;
+
+	/** 终端可见行数。客户端配置决定，并在打开终端时随包发给服务端，两端布局才一致。 */
+	private final int rows;
 
 	private static final Map<UUID, List<BlockPos>> PENDING_POSITIONS = new HashMap<>();
 	private final List<BlockPos> containerPositions = new ArrayList<>();
@@ -64,9 +62,9 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		NONE, ASC, DESC
 	}
 
-	// 0=名称, 1=数量, 2=ID, 3=模组
+	// 0=名称, 1=数量, 2=ID, 3=模组；默认选中「数量 · 由多到少」
 	private final SortDirection[] sortDirs = new SortDirection[]{
-		SortDirection.NONE, SortDirection.NONE, SortDirection.NONE, SortDirection.NONE
+		SortDirection.NONE, SortDirection.DESC, SortDirection.NONE, SortDirection.NONE
 	};
 
 	// 排序按钮翻译键（语言文件驱动）
@@ -83,8 +81,9 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 	private int scrollOffset = 0;
 	private String searchQuery = "";
 
-	public PortableTerminalMenu(int containerId, Inventory playerInventory, List<BlockPos> containerPositions) {
+	public PortableTerminalMenu(int containerId, Inventory playerInventory, List<BlockPos> containerPositions, int rows) {
 		super(ModMenuTypes.get(), containerId);
+		this.rows = PortableTerminalLayout.clampRows(rows);
 		this.player = playerInventory.player;
 		this.containerPositions.addAll(containerPositions);
 
@@ -96,9 +95,9 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 
 		loadSortConfig();
 
-		// 终端虚拟槽（索引 0 .. TERMINAL_SLOT_COUNT-1）
-		VirtualTerminalContainer terminalContainer = new VirtualTerminalContainer(TERMINAL_SLOT_COUNT);
-		for (int row = 0; row < TERMINAL_ROWS; row++) {
+		// 终端虚拟槽（索引 0 .. terminalSlotCount()-1）
+		VirtualTerminalContainer terminalContainer = new VirtualTerminalContainer(terminalSlotCount());
+		for (int row = 0; row < this.rows; row++) {
 			for (int col = 0; col < COLS; col++) {
 				int idx = row * COLS + col;
 				int sx = TERM_LEFT + col * SLOT_SIZE;
@@ -109,18 +108,28 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 			}
 		}
 
-		// 主背包 3x9 + 快捷栏 + 副手
+		// 主背包 3x9 + 快捷栏 + 副手（副手与快捷栏同一行，下边对齐）
+		int invTop = PortableTerminalLayout.invTop(this.rows);
+		int hotbarTop = PortableTerminalLayout.hotbarTop(this.rows);
 		for (int row = 0; row < 3; row++) {
 			for (int col = 0; col < 9; col++) {
 				int sx = INV_LEFT + col * SLOT_SIZE;
-				int sy = INV_TOP + row * SLOT_SIZE;
+				int sy = invTop + row * SLOT_SIZE;
 				this.addSlot(new Slot(playerInventory, col + row * 9 + 9, sx, sy));
 			}
 		}
 		for (int col = 0; col < 9; col++) {
-			this.addSlot(new Slot(playerInventory, col, INV_LEFT + col * SLOT_SIZE, HOTBAR_TOP));
+			this.addSlot(new Slot(playerInventory, col, INV_LEFT + col * SLOT_SIZE, hotbarTop));
 		}
-		this.addSlot(new Slot(playerInventory, 40, OFFHAND_X, OFFHAND_Y));
+		this.addSlot(new Slot(playerInventory, 40, OFFHAND_X, PortableTerminalLayout.offhandY(this.rows)));
+	}
+
+	public int getRows() {
+		return rows;
+	}
+
+	public int terminalSlotCount() {
+		return PortableTerminalLayout.terminalSlotCount(rows);
 	}
 
 	// ==================== 终端显示 / 滚动 / 搜索 ====================
@@ -129,7 +138,7 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		if (scrollOffset > maxScroll) scrollOffset = maxScroll;
 		if (scrollOffset < 0) scrollOffset = 0;
 
-		for (int row = 0; row < TERMINAL_ROWS; row++) {
+		for (int row = 0; row < this.rows; row++) {
 			for (int col = 0; col < COLS; col++) {
 				int slotIdx = row * COLS + col;
 				int itemIdx = (scrollOffset + row) * COLS + col;
@@ -151,7 +160,7 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 	}
 
 	public int getMaxScroll() {
-		return Math.max(0, getTotalRows() - TERMINAL_ROWS);
+		return Math.max(0, getTotalRows() - rows);
 	}
 
 	public int getTotalRows() {
@@ -194,27 +203,11 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 				return false;
 			}
 		}
-		// 名称搜索
-		String name = stack.getItem().getName(stack).getString().toLowerCase();
-		if (name.contains(query)) return true;
-		// 拼音搜索：将中文名转换为全拼（无声调），匹配查询词
-		String pinyin = toPinyin(name);
-		if (pinyin.contains(query)) return true;
-		// 首字母缩写匹配（如 "st" 匹配 "石头"）
-		String initials = toPinyinInitials(name);
-		if (initials.contains(query)) return true;
+		// 名称搜索：装了「通用拼音搜索」时由它接管（支持全拼、首字母、简繁），否则退化为子串匹配
+		String name = stack.getItem().getName(stack).getString();
+		if (PinyinSearch.matches(name, query)) return true;
 		String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString().toLowerCase();
 		return id.contains(query);
-	}
-
-	/** 简易拼音搜索：中文直接按原文匹配，英文/数字按小写匹配 */
-	private static String toPinyin(String str) {
-		return str.toLowerCase();
-	}
-
-	/** 简易首字母：直接返回原文小写 */
-	private static String toPinyinInitials(String str) {
-		return str.toLowerCase();
 	}
 
 	/** 接收服务器同步的聚合物品列表 */
@@ -229,7 +222,7 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 	// ==================== 原版同步兼容 ====================
 	@Override
 	public void setItem(int slotIndex, int stateId, ItemStack stack) {
-		if (slotIndex < TERMINAL_SLOT_COUNT) return;
+		if (slotIndex < terminalSlotCount()) return;
 		super.setItem(slotIndex, stateId, stack);
 	}
 
@@ -272,12 +265,12 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		Slot slot = this.slots.get(slotIndex);
 		if (!slot.hasItem()) return ItemStack.EMPTY;
 
-		if (slotIndex < TERMINAL_SLOT_COUNT) {
+		if (slotIndex < terminalSlotCount()) {
 			// 从终端取出一组到玩家背包（不含副手槽）
 			ItemStack template = slot.getItem();
 			ItemStack extracted = extractFromContainers(template, template.getMaxStackSize());
 			if (!extracted.isEmpty()) {
-				this.moveItemStackTo(extracted, TERMINAL_SLOT_COUNT, TERMINAL_SLOT_COUNT + 36, true);
+				this.moveItemStackTo(extracted, terminalSlotCount(), terminalSlotCount() + 36, true);
 				if (!extracted.isEmpty()) {
 					ItemStack leftover = insertIntoContainers(extracted);
 					if (!leftover.isEmpty()) {

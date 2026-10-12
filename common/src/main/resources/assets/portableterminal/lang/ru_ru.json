@@ -10,5 +10,18 @@
   "key.category.portableterminal.custom_category": "Portable Terminal",
   "msg.portableterminal.server_disabled": "Сервер отключил мод Portable Terminal.",
   "msg.portableterminal.no_containers": "Рядом не найдено контейнеров",
-  "modmenu.portableterminal.source": "Исходный код"
+  "modmenu.portableterminal.source": "Исходный код",
+  "gui.portableterminal.sort.tooltip": "Нажмите для переключения: выкл -> по возрастанию -> по убыванию",
+  "gui.portableterminal.rows": "Строк: %s",
+  "gui.portableterminal.rows.tooltip": "Изменить число отображаемых строк",
+  "config.portableterminal.title": "Портативный терминал",
+  "config.portableterminal.category.general": "Общие",
+  "config.portableterminal.master_switch": "Включить терминал",
+  "config.portableterminal.master_switch.tooltip": "Отключает весь мод на этом клиенте",
+  "config.portableterminal.scan_radius": "Радиус поиска контейнеров",
+  "config.portableterminal.scan_radius.tooltip": "Насколько далеко терминал ищет контейнеры (0-16)",
+  "config.portableterminal.terminal_rows": "Строки терминала",
+  "config.portableterminal.terminal_rows.tooltip": "Сколько строк показывает терминал (3-6)",
+  "config.portableterminal.blacklist": "Игнорируемые блоки",
+  "config.portableterminal.blacklist.tooltip": "ID блоков, которые терминал игнорирует, напр. minecraft:furnace"
 }

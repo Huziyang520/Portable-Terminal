@@ -10,5 +10,18 @@
   "key.category.portableterminal.custom_category": "Portable Terminal",
   "msg.portableterminal.server_disabled": "サーバーが Portable Terminal を無効にしました。",
   "msg.portableterminal.no_containers": "近くにコンテナがありません",
-  "modmenu.portableterminal.source": "ソース"
+  "modmenu.portableterminal.source": "ソース",
+  "gui.portableterminal.sort.tooltip": "クリックで切り替え：なし → 昇順 → 降順",
+  "gui.portableterminal.rows": "行数：%s",
+  "gui.portableterminal.rows.tooltip": "ターミナルの表示行数を変更",
+  "config.portableterminal.title": "ポータブル端末",
+  "config.portableterminal.category.general": "一般",
+  "config.portableterminal.master_switch": "端末を有効にする",
+  "config.portableterminal.master_switch.tooltip": "オフにするとこのクライアントでMOD全体が無効になります",
+  "config.portableterminal.scan_radius": "コンテナ検索範囲",
+  "config.portableterminal.scan_radius.tooltip": "端末がコンテナを探す範囲（0-16）",
+  "config.portableterminal.terminal_rows": "端末の表示行数",
+  "config.portableterminal.terminal_rows.tooltip": "端末の表示行数（3-6）",
+  "config.portableterminal.blacklist": "無視するブロック",
+  "config.portableterminal.blacklist.tooltip": "端末が無視するブロックID（例：minecraft:furnace）"
 }

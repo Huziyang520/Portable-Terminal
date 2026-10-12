@@ -10,5 +10,18 @@
   "key.category.portableterminal.custom_category": "Portable Terminal",
   "msg.portableterminal.server_disabled": "El servidor ha desactivado el mod Portable Terminal.",
   "msg.portableterminal.no_containers": "No se han encontrado contenedores cerca",
-  "modmenu.portableterminal.source": "Código fuente"
+  "modmenu.portableterminal.source": "Código fuente",
+  "gui.portableterminal.sort.tooltip": "Clic para alternar: desactivado -> ascendente -> descendente",
+  "gui.portableterminal.rows": "Filas: %s",
+  "gui.portableterminal.rows.tooltip": "Cambiar cuántas filas muestra el terminal",
+  "config.portableterminal.title": "Terminal portátil",
+  "config.portableterminal.category.general": "General",
+  "config.portableterminal.master_switch": "Activar el terminal",
+  "config.portableterminal.master_switch.tooltip": "Desactiva todo el mod en este cliente",
+  "config.portableterminal.scan_radius": "Radio de búsqueda de contenedores",
+  "config.portableterminal.scan_radius.tooltip": "Hasta dónde busca contenedores el terminal (0-16)",
+  "config.portableterminal.terminal_rows": "Filas del terminal",
+  "config.portableterminal.terminal_rows.tooltip": "Cuántas filas muestra el terminal (3-6)",
+  "config.portableterminal.blacklist": "Bloques ignorados",
+  "config.portableterminal.blacklist.tooltip": "IDs de bloques que el terminal ignora, p. ej. minecraft:furnace"
 }

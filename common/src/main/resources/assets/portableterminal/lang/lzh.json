@@ -10,5 +10,18 @@
   "key.category.portableterminal.custom_category": "隨身儲藏",
   "msg.portableterminal.server_disabled": "伺服已禁隨身儲藏之模。",
   "msg.portableterminal.no_containers": "近處無器可尋",
-  "modmenu.portableterminal.source": "本源"
+  "modmenu.portableterminal.source": "本源",
+  "gui.portableterminal.sort.tooltip": "點之則易：止 → 升 → 降",
+  "gui.portableterminal.rows": "行列：%s",
+  "gui.portableterminal.rows.tooltip": "易其行列之數",
+  "config.portableterminal.title": "隨身終端",
+  "config.portableterminal.category.general": "通例",
+  "config.portableterminal.master_switch": "啟終端",
+  "config.portableterminal.master_switch.tooltip": "止之則本機盡廢此模",
+  "config.portableterminal.scan_radius": "索器之域",
+  "config.portableterminal.scan_radius.tooltip": "終端索器之遠近（0-16）",
+  "config.portableterminal.terminal_rows": "終端行列",
+  "config.portableterminal.terminal_rows.tooltip": "終端所見之行列（3-6）",
+  "config.portableterminal.blacklist": "所略之方",
+  "config.portableterminal.blacklist.tooltip": "終端所略之方識，如 minecraft:furnace"
 }

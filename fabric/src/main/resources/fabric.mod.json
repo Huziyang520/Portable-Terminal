@@ -22,6 +22,9 @@
     ],
     "client": [
       "com.portableterminal.fabric.PortableTerminalFabricClient"
+    ],
+    "modmenu": [
+      "com.portableterminal.fabric.PortableTerminalModMenu"
     ]
   },
   "depends": {

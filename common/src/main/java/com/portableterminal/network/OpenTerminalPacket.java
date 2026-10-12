@@ -1,5 +1,6 @@
 package com.portableterminal.network;
 
+import com.portableterminal.menu.PortableTerminalLayout;
 import com.portableterminal.menu.PortableTerminalMenu;
 import com.portableterminal.platform.Services;
 import net.minecraft.core.BlockPos;
@@ -12,12 +13,21 @@ import net.minecraft.network.chat.Component;
 
 import java.util.List;
 
-public record OpenTerminalPacket() implements CustomPacketPayload {
+/**
+ * Asks the server to open the terminal.
+ *
+ * <p>{@code rows} is the client's terminal height setting. It travels with the request so the
+ * server builds the menu with exactly the same slot layout the client expects — the menu layout
+ * cannot be derived independently on the two sides.</p>
+ */
+public record OpenTerminalPacket(int rows) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<OpenTerminalPacket> TYPE =
 		new CustomPacketPayload.Type<>(Identifier.tryBuild("portableterminal", "open_terminal"));
 
-	public static final StreamCodec<FriendlyByteBuf, OpenTerminalPacket> CODEC =
-		StreamCodec.unit(new OpenTerminalPacket());
+	public static final StreamCodec<FriendlyByteBuf, OpenTerminalPacket> CODEC = StreamCodec.of(
+		(buf, packet) -> buf.writeByte(PortableTerminalLayout.clampRows(packet.rows())),
+		buf -> new OpenTerminalPacket(buf.readByte())
+	);
 
 	@Override
 	public Type<? extends CustomPacketPayload> type() {
@@ -25,7 +35,8 @@ public record OpenTerminalPacket() implements CustomPacketPayload {
 	}
 
 	/** Server side handling; invoked by the loader's packet bootstrap. */
-	public static void handleServer(ServerPlayer player) {
+	public static void handleServer(ServerPlayer player, int rows) {
+		int clampedRows = PortableTerminalLayout.clampRows(rows);
 		List<BlockPos> containers = PortableTerminalMenu.scanNearbyContainers(player);
 
 		if (containers.isEmpty()) {
@@ -34,7 +45,7 @@ public record OpenTerminalPacket() implements CustomPacketPayload {
 		}
 
 		PortableTerminalMenu.setPendingPositions(player, containers);
-		player.openMenu(new PortableTerminalMenuProvider(containers));
+		player.openMenu(new PortableTerminalMenuProvider(containers, clampedRows));
 
 		if (player.containerMenu instanceof PortableTerminalMenu psm) {
 			psm.rebuildAggregatedItems();
@@ -44,14 +55,16 @@ public record OpenTerminalPacket() implements CustomPacketPayload {
 
 	private static class PortableTerminalMenuProvider implements net.minecraft.world.MenuProvider {
 		private final List<BlockPos> containers;
+		private final int rows;
 
-		public PortableTerminalMenuProvider(List<BlockPos> containers) {
+		public PortableTerminalMenuProvider(List<BlockPos> containers, int rows) {
 			this.containers = containers;
+			this.rows = rows;
 		}
 
 		@Override
 		public PortableTerminalMenu createMenu(int containerId, net.minecraft.world.entity.player.Inventory inventory, net.minecraft.world.entity.player.Player player) {
-			return new PortableTerminalMenu(containerId, inventory, containers);
+			return new PortableTerminalMenu(containerId, inventory, containers, rows);
 		}
 
 		@Override

@@ -10,5 +10,18 @@
   "key.category.portableterminal.custom_category": "Portable Terminal",
   "msg.portableterminal.server_disabled": "The server has disabled the Portable Terminal mod.",
   "msg.portableterminal.no_containers": "No containers found nearby",
-  "modmenu.portableterminal.source": "Source"
+  "modmenu.portableterminal.source": "Source",
+  "gui.portableterminal.sort.tooltip": "Click to cycle: off -> ascending -> descending",
+  "gui.portableterminal.rows": "Rows: %s",
+  "gui.portableterminal.rows.tooltip": "Change how many rows the terminal shows",
+  "config.portableterminal.title": "Portable Terminal",
+  "config.portableterminal.category.general": "General",
+  "config.portableterminal.master_switch": "Enable the terminal",
+  "config.portableterminal.master_switch.tooltip": "Turning this off disables the whole mod on this client",
+  "config.portableterminal.scan_radius": "Container scan radius",
+  "config.portableterminal.scan_radius.tooltip": "How far the terminal looks for containers (0-16)",
+  "config.portableterminal.terminal_rows": "Terminal rows",
+  "config.portableterminal.terminal_rows.tooltip": "How many rows the terminal shows (3-6)",
+  "config.portableterminal.blacklist": "Ignored blocks",
+  "config.portableterminal.blacklist.tooltip": "Block IDs the terminal ignores, e.g. minecraft:furnace"
 }

@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.portableterminal.PortableTerminalMod;
+import com.portableterminal.menu.PortableTerminalLayout;
 import com.portableterminal.platform.Services;
 
 import java.io.IOException;
@@ -22,6 +23,8 @@ public class ModConfig {
 	public static boolean masterSwitch = true;
 	public static List<String> blacklistBlockIds = new ArrayList<>();
 	public static String sortConfig = "";
+	/** Visible terminal rows; the GUI size follows from this. */
+	public static int terminalRows = PortableTerminalLayout.DEFAULT_ROWS;
 
 	/** Resolved lazily: the config directory is only known once the loader is up. */
 	private static Path configPath() {
@@ -66,6 +69,9 @@ public class ModConfig {
 			if (obj.has("sortConfig")) {
 				sortConfig = obj.get("sortConfig").getAsString();
 			}
+			if (obj.has("terminalRows")) {
+				terminalRows = PortableTerminalLayout.clampRows(obj.get("terminalRows").getAsInt());
+			}
 		} catch (Exception e) {
 			PortableTerminalMod.LOGGER.error("Failed to load config, using defaults.", e);
 			createDefault();
@@ -83,6 +89,7 @@ public class ModConfig {
 		}
 		obj.add("blacklistBlockIds", arr);
 		obj.addProperty("sortConfig", sortConfig);
+		obj.addProperty("terminalRows", terminalRows);
 
 		try {
 			Files.writeString(configPath(), GSON.toJson(obj));
@@ -103,7 +110,9 @@ public class ModConfig {
 				"  \"masterSwitch\": true,\n" +
 				"  // 黑名单方块ID列表，这些方块内的物品不会被扫描和存取\n" +
 				"  // 示例：[\"minecraft:furnace\", \"minecraft:hopper\", \"minecraft:barrel\"]\n" +
-				"  \"blacklistBlockIds\": []\n" +
+				"  \"blacklistBlockIds\": [],\n" +
+				"  // 终端显示行数（3~6），决定终端界面的高度\n" +
+				"  \"terminalRows\": 4\n" +
 				"}\n";
 		try {
 			Files.writeString(configPath(), defaultContent);
