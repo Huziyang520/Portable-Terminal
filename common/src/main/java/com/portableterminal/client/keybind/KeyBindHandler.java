@@ -27,18 +27,19 @@ public class KeyBindHandler {
 	private KeyBindHandler() {
 	}
 
-	/** Builds the mapping; the calling loader is responsible for registering it. */
+	/**
+	 * Builds the mapping and publishes it to this handler. The calling loader only has to register
+	 * the returned instance with its own API — forgetting to "bind" is not possible this way.
+	 */
 	public static KeyMapping createMapping(KeyMapping.Category category) {
-		return new KeyMapping(
+		KeyMapping mapping = new KeyMapping(
 			MAPPING_TRANSLATION_KEY,
 			InputConstants.Type.KEYSYM,
 			GLFW.GLFW_KEY_GRAVE_ACCENT,
 			category
 		);
-	}
-
-	public static void bind(KeyMapping mapping) {
 		openTerminal = mapping;
+		return mapping;
 	}
 
 	public static void tick(Minecraft minecraft) {

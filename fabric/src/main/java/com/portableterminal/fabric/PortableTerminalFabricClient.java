@@ -21,13 +21,14 @@ public class PortableTerminalFabricClient implements ClientModInitializer {
 
 		ClientSender.install(ClientPlayNetworking::send);
 
-		ClientPlayNetworking.registerReceiver(TerminalItemsSyncPacket.TYPE, (payload, context) ->
+		// Global (not per-screen) receivers are the ones that may be registered at client init.
+		ClientPlayNetworking.registerGlobalReceiver(TerminalItemsSyncPacket.TYPE, (payload, context) ->
 			context.client().execute(() -> PortableTerminalClient.handleItemsSync(payload.items())));
 
 		MenuScreens.register(ModMenuTypes.get(), PortableTerminalScreen::new);
 
 		KeyMapping.Category category = KeyMapping.Category.register(KeyBindHandler.CATEGORY_ID);
-		KeyBindHandler.bind(KeyMappingHelper.registerKeyMapping(KeyBindHandler.createMapping(category)));
+		KeyMappingHelper.registerKeyMapping(KeyBindHandler.createMapping(category));
 
 		ClientTickEvents.END_CLIENT_TICK.register(PortableTerminalClient::tick);
 	}
