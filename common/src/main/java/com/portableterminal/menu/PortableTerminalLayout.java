@@ -53,12 +53,22 @@ public final class PortableTerminalLayout {
 	/**
 	 * One nine-sliced panel sprite covers every row count: its vertical center band is exactly one
 	 * slot row and repeats ({@code stretch_inner=false}), so any number of rows renders crisply
-	 * from the same texture. See panel.png.mcmeta.
+	 * 一张 193×147 的贴图分三段 1:1 使用：表头 31px + 一行槽位 18px（按行数重复贴）+ 页脚 98px。
+	 *
+	 * <p>刻意不用九宫格缩放：{@code blitNineSlicedSprite} 会把每条边钳制到目标高度的一半
+	 * （{@code Math.min(border.bottom(), height / 2)}），页脚 98px 高于面板一半时底边被截短，
+	 * 中间带就会取到长度不对的片段，格子与物品错位，且行数越少越明显。</p>
 	 */
 	public static final Identifier PANEL_SPRITE = sprite("panel");
+	/** 面板源图尺寸与分段（与 panel.png 的实际像素一一对应）。 */
+	public static final int PANEL_SOURCE_WIDTH = 193;
+	public static final int PANEL_SOURCE_HEIGHT = 147;
+	public static final int PANEL_HEADER_HEIGHT = 31;
+	public static final int PANEL_FOOTER_HEIGHT = 98;
 	public static final Identifier BUTTON_SPRITE = sprite("button");
-	public static final Identifier ARROW_UP_SPRITE = sprite("arrow_up");
-	public static final Identifier ARROW_DOWN_SPRITE = sprite("arrow_down");
+	/** 加行 / 减行按键：+/− 符号。 */
+	public static final Identifier PLUS_SPRITE = sprite("plus");
+	public static final Identifier MINUS_SPRITE = sprite("minus");
 	public static final Identifier HIGHLIGHT_SPRITE = sprite("highlight");
 	/** 排序图标右下角的状态角标：正序朝上、倒序朝下。 */
 	public static final Identifier CORNER_UP_SPRITE = sprite("corner_up");

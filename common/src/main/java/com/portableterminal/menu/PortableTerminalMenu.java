@@ -468,6 +468,8 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		if (parts.length != 2) return;
 		for (int i = 0; i < SORT_PERSIST_KEYS.length; i++) {
 			if (SORT_PERSIST_KEYS[i].equals(parts[0])) {
+				// 先清掉内置默认（数量↓），否则默认项会和玩家真正选中的项一起显示为选中
+				for (int j = 0; j < sortDirs.length; j++) sortDirs[j] = SortDirection.NONE;
 				sortDirs[i] = SortDirection.valueOf(parts[1]);
 				break;
 			}

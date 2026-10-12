@@ -144,14 +144,14 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		this.addRenderableWidget(new IconButton(
 			this.leftPos + PortableTerminalLayout.SORT_BTN_X,
 			this.topPos + PortableTerminalLayout.ROWS_UP_BTN_Y,
-			() -> PortableTerminalLayout.ARROW_UP_SPRITE,
+			() -> PortableTerminalLayout.PLUS_SPRITE,
 			() -> false,
 			() -> changeRows(1),
 			-1));
 		this.addRenderableWidget(new IconButton(
 			this.leftPos + PortableTerminalLayout.SORT_BTN_X,
 			this.topPos + PortableTerminalLayout.ROWS_DOWN_BTN_Y,
-			() -> PortableTerminalLayout.ARROW_DOWN_SPRITE,
+			() -> PortableTerminalLayout.MINUS_SPRITE,
 			() -> false,
 			() -> changeRows(-1),
 			-2));
@@ -214,17 +214,55 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 	@Override
 	public void extractBackground(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
-		// 一张贴图铺满整个面板；内部 18px 的中间带按行数重复（见 panel.png.mcmeta）
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE,
-			this.leftPos, this.topPos, this.guiWidth, this.guiHeight);
+		int srcW = PortableTerminalLayout.PANEL_SOURCE_WIDTH;
+		int srcH = PortableTerminalLayout.PANEL_SOURCE_HEIGHT;
+		int headerH = PortableTerminalLayout.PANEL_HEADER_HEIGHT;
+		int x = this.leftPos;
+		int y = this.topPos;
 
-		// 副手槽在面板之外，单独贴一次槽位贴图
+		// 同一张贴图分三段 1:1 贴：表头 / 一行槽位（按行数重复）/ 页脚。
+		// 不能用九宫格缩放：它会按目标高度的一半钳制每条边，页脚高于面板一半时中间带
+		// 会被取成长度不对的片段，格子与物品就会错位（行数越少越明显）。
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE,
+			srcW, srcH, 0, 0, x, y, this.guiWidth, headerH);
+		for (int row = 0; row < this.rows; row++) {
+			gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE,
+				srcW, srcH, 0, headerH, x, y + headerH + row * SLOT_SIZE, this.guiWidth, SLOT_SIZE);
+		}
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE,
+			srcW, srcH, 0, headerH + SLOT_SIZE,
+			x, y + headerH + this.rows * SLOT_SIZE, this.guiWidth, PortableTerminalLayout.PANEL_FOOTER_HEIGHT);
+
+		// 副手槽在面板之外：原版圆角小面板外框 + 槽位底
+		int offX = x + PortableTerminalLayout.OFFHAND_X;
+		int offY = y + PortableTerminalLayout.offhandY(this.rows);
+		drawFramePanel(gfx, offX - 5, offY - 5, SLOT_SIZE + 8, SLOT_SIZE + 8);
 		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.SLOT_SPRITE,
-			this.leftPos + PortableTerminalLayout.OFFHAND_X - 1,
-			this.topPos + PortableTerminalLayout.offhandY(this.rows) - 1,
-			SLOT_SIZE, SLOT_SIZE);
+			offX - 1, offY - 1, SLOT_SIZE, SLOT_SIZE);
 
 		drawScrollbarThumb(gfx);
+	}
+
+	/**
+	 * 用面板贴图的边角，画一个带原版圆角边框的小面板（副手槽的外框）。
+	 * 全部取自同一张贴图，四角就是原版容器的 7×7 角块。
+	 */
+	private void drawFramePanel(GuiGraphicsExtractor gfx, int x, int y, int w, int h) {
+		int srcW = PortableTerminalLayout.PANEL_SOURCE_WIDTH;
+		int srcH = PortableTerminalLayout.PANEL_SOURCE_HEIGHT;
+		// 内部
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE,
+			srcW, srcH, 3, 3, x + 3, y + 3, w - 6, h - 6);
+		// 四条直边
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 7, 0, x + 7, y, w - 14, 3);
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 7, srcH - 3, x + 7, y + h - 3, w - 14, 3);
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, 7, x, y + 7, 3, h - 14);
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 3, 7, x + w - 3, y + 7, 3, h - 14);
+		// 四角
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, 0, x, y, 7, 7);
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 7, 0, x + w - 7, y, 7, 7);
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, srcH - 7, x, y + h - 7, 7, 7);
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 7, srcH - 7, x + w - 7, y + h - 7, 7, 7);
 	}
 
 	private void drawScrollbarThumb(GuiGraphicsExtractor gfx) {
