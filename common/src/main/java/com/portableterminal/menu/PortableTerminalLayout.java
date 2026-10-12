@@ -60,6 +60,19 @@ public final class PortableTerminalLayout {
 	public static final Identifier ARROW_UP_SPRITE = sprite("arrow_up");
 	public static final Identifier ARROW_DOWN_SPRITE = sprite("arrow_down");
 	public static final Identifier HIGHLIGHT_SPRITE = sprite("highlight");
+	/** 排序图标右下角的状态角标：正序朝上、倒序朝下。 */
+	public static final Identifier CORNER_UP_SPRITE = sprite("corner_up");
+	public static final Identifier CORNER_DOWN_SPRITE = sprite("corner_down");
+	public static final int CORNER_SIZE = 7;
+
+	/** 每种排序类型一个主图标；正序/倒序的区别只在右下角的角标箭头。 */
+	private static final Identifier[] SORT_ICON_SPRITES = {
+		sprite("sort_name"), sprite("sort_count"), sprite("sort_id"), sprite("sort_mod")
+	};
+
+	public static Identifier sortIconSprite(int index) {
+		return SORT_ICON_SPRITES[Math.floorMod(index, SORT_ICON_SPRITES.length)];
+	}
 
 	public static Identifier sprite(String path) {
 		return Identifier.tryBuild(PortableTerminalMod.MOD_ID, SPRITE_ROOT + path);

@@ -133,7 +133,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 				this.leftPos + PortableTerminalLayout.SORT_BTN_X,
 				this.topPos + PortableTerminalLayout.SORT_BTN_Y
 					+ i * (BTN_SIZE + PortableTerminalLayout.BTN_GAP),
-				this::sortArrow,
+				() -> null,
 				() -> this.menu.getSortDir(index) != PortableTerminalMenu.SortDirection.NONE,
 				() -> cycleSort(index),
 				index);
@@ -157,17 +157,13 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			-2));
 	}
 
-	/** 排序按钮当前应显示的箭头；未选中时返回 null（只显示按钮底）。 */
-	private Identifier sortArrowFor(int index) {
+	/** 排序类型被选中时右下角要显示的角标；未选中返回 null（只显示类型图标）。 */
+	private Identifier sortCornerArrow(int index) {
 		return switch (this.menu.getSortDir(index)) {
 			case NONE -> null;
-			case ASC -> PortableTerminalLayout.ARROW_UP_SPRITE;
-			case DESC -> PortableTerminalLayout.ARROW_DOWN_SPRITE;
+			case ASC -> PortableTerminalLayout.CORNER_UP_SPRITE;
+			case DESC -> PortableTerminalLayout.CORNER_DOWN_SPRITE;
 		};
-	}
-
-	private Identifier sortArrow() {
-		return sortArrowFor(0);
 	}
 
 	private void cycleSort(int index) {
@@ -497,17 +493,33 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 		@Override
 		protected void extractContents(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
-			gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.BUTTON_SPRITE,
-				this.getX(), this.getY(), BTN_SIZE, BTN_SIZE);
-			Identifier icon = this.sortIndex >= 0
-				? sortArrowFor(this.sortIndex)
-				: this.arrow.get();
-			if (icon != null) {
-				gfx.blitSprite(RenderPipelines.GUI_TEXTURED, icon, this.getX(), this.getY(), BTN_SIZE, BTN_SIZE);
-			}
-			if (this.highlighted.getAsBoolean()) {
-				gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.HIGHLIGHT_SPRITE,
+			if (this.sortIndex >= 0) {
+				// 底图 = 该排序类型自己的图标（名称 / 数量 / ID / 模组）
+				gfx.blitSprite(RenderPipelines.GUI_TEXTURED,
+					PortableTerminalLayout.sortIconSprite(this.sortIndex),
 					this.getX(), this.getY(), BTN_SIZE, BTN_SIZE);
+				// 右下角角标 = 当前状态；正序朝上、倒序朝下，未选中则不画
+				Identifier corner = sortCornerArrow(this.sortIndex);
+				if (corner != null) {
+					int cornerSize = PortableTerminalLayout.CORNER_SIZE;
+					gfx.blitSprite(RenderPipelines.GUI_TEXTURED, corner,
+						this.getX() + BTN_SIZE - cornerSize,
+						this.getY() + BTN_SIZE - cornerSize,
+						cornerSize, cornerSize);
+				}
+				if (this.highlighted.getAsBoolean()) {
+					gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.HIGHLIGHT_SPRITE,
+						this.getX(), this.getY(), BTN_SIZE, BTN_SIZE);
+				}
+			} else {
+				// 行数按键：通用按钮底 + 大箭头
+				gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.BUTTON_SPRITE,
+					this.getX(), this.getY(), BTN_SIZE, BTN_SIZE);
+				Identifier icon = this.arrow.get();
+				if (icon != null) {
+					gfx.blitSprite(RenderPipelines.GUI_TEXTURED, icon,
+						this.getX(), this.getY(), BTN_SIZE, BTN_SIZE);
+				}
 			}
 		}
 
