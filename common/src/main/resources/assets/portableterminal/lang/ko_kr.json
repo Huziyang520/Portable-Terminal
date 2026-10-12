@@ -23,5 +23,14 @@
   "config.portableterminal.terminal_rows": "터미널 표시 행 수",
   "config.portableterminal.terminal_rows.tooltip": "터미널에 표시할 행 수 (3-6)",
   "config.portableterminal.blacklist": "무시할 블록",
-  "config.portableterminal.blacklist.tooltip": "터미널이 무시할 블록 ID, 예: minecraft:furnace"
+  "config.portableterminal.blacklist.tooltip": "터미널이 무시할 블록 ID, 예: minecraft:furnace",
+  "gui.portableterminal.sort.name.asc": "이름: 오름차순",
+  "gui.portableterminal.sort.name.desc": "이름: 내림차순",
+  "gui.portableterminal.sort.count.asc": "개수: 적은 순",
+  "gui.portableterminal.sort.count.desc": "개수: 많은 순",
+  "gui.portableterminal.sort.id.asc": "ID: 오름차순",
+  "gui.portableterminal.sort.id.desc": "ID: 내림차순",
+  "gui.portableterminal.sort.mod.asc": "모드: 오름차순",
+  "gui.portableterminal.sort.mod.desc": "모드: 내림차순",
+  "gui.portableterminal.sort.none": "정렬 안 됨 (클릭하여 활성화)"
 }

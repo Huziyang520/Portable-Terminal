@@ -23,5 +23,14 @@
   "config.portableterminal.terminal_rows": "Zeilen des Terminals",
   "config.portableterminal.terminal_rows.tooltip": "Wie viele Zeilen das Terminal zeigt (3-6)",
   "config.portableterminal.blacklist": "Ignorierte Blöcke",
-  "config.portableterminal.blacklist.tooltip": "Block-IDs, die das Terminal ignoriert, z. B. minecraft:furnace"
+  "config.portableterminal.blacklist.tooltip": "Block-IDs, die das Terminal ignoriert, z. B. minecraft:furnace",
+  "gui.portableterminal.sort.name.asc": "Name: aufsteigend",
+  "gui.portableterminal.sort.name.desc": "Name: absteigend",
+  "gui.portableterminal.sort.count.asc": "Anzahl: wenig bis viel",
+  "gui.portableterminal.sort.count.desc": "Anzahl: viel bis wenig",
+  "gui.portableterminal.sort.id.asc": "ID: aufsteigend",
+  "gui.portableterminal.sort.id.desc": "ID: absteigend",
+  "gui.portableterminal.sort.mod.asc": "Mod: aufsteigend",
+  "gui.portableterminal.sort.mod.desc": "Mod: absteigend",
+  "gui.portableterminal.sort.none": "Nicht sortiert (klicken zum Aktivieren)"
 }

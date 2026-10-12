@@ -23,5 +23,14 @@
   "config.portableterminal.terminal_rows": "終端行列",
   "config.portableterminal.terminal_rows.tooltip": "終端所見之行列（3-6）",
   "config.portableterminal.blacklist": "所略之方",
-  "config.portableterminal.blacklist.tooltip": "終端所略之方識，如 minecraft:furnace"
+  "config.portableterminal.blacklist.tooltip": "終端所略之方識，如 minecraft:furnace",
+  "gui.portableterminal.sort.name.asc": "名：正序",
+  "gui.portableterminal.sort.name.desc": "名：反序",
+  "gui.portableterminal.sort.count.asc": "數：由寡而眾",
+  "gui.portableterminal.sort.count.desc": "數：由眾而寡",
+  "gui.portableterminal.sort.id.asc": "識：正序",
+  "gui.portableterminal.sort.id.desc": "識：反序",
+  "gui.portableterminal.sort.mod.asc": "模：正序",
+  "gui.portableterminal.sort.mod.desc": "模：反序",
+  "gui.portableterminal.sort.none": "未排序（點之則啟）"
 }

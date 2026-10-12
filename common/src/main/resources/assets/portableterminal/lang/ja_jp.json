@@ -23,5 +23,14 @@
   "config.portableterminal.terminal_rows": "端末の表示行数",
   "config.portableterminal.terminal_rows.tooltip": "端末の表示行数（3-6）",
   "config.portableterminal.blacklist": "無視するブロック",
-  "config.portableterminal.blacklist.tooltip": "端末が無視するブロックID（例：minecraft:furnace）"
+  "config.portableterminal.blacklist.tooltip": "端末が無視するブロックID（例：minecraft:furnace）",
+  "gui.portableterminal.sort.name.asc": "名前：昇順",
+  "gui.portableterminal.sort.name.desc": "名前：降順",
+  "gui.portableterminal.sort.count.asc": "個数：少ない順",
+  "gui.portableterminal.sort.count.desc": "個数：多い順",
+  "gui.portableterminal.sort.id.asc": "ID：昇順",
+  "gui.portableterminal.sort.id.desc": "ID：降順",
+  "gui.portableterminal.sort.mod.asc": "MOD：昇順",
+  "gui.portableterminal.sort.mod.desc": "MOD：降順",
+  "gui.portableterminal.sort.none": "未ソート（クリックで有効）"
 }

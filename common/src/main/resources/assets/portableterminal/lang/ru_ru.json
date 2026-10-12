@@ -23,5 +23,14 @@
   "config.portableterminal.terminal_rows": "Строки терминала",
   "config.portableterminal.terminal_rows.tooltip": "Сколько строк показывает терминал (3-6)",
   "config.portableterminal.blacklist": "Игнорируемые блоки",
-  "config.portableterminal.blacklist.tooltip": "ID блоков, которые терминал игнорирует, напр. minecraft:furnace"
+  "config.portableterminal.blacklist.tooltip": "ID блоков, которые терминал игнорирует, напр. minecraft:furnace",
+  "gui.portableterminal.sort.name.asc": "Имя: по возрастанию",
+  "gui.portableterminal.sort.name.desc": "Имя: по убыванию",
+  "gui.portableterminal.sort.count.asc": "Количество: по возрастанию",
+  "gui.portableterminal.sort.count.desc": "Количество: по убыванию",
+  "gui.portableterminal.sort.id.asc": "ID: по возрастанию",
+  "gui.portableterminal.sort.id.desc": "ID: по убыванию",
+  "gui.portableterminal.sort.mod.asc": "Мод: по возрастанию",
+  "gui.portableterminal.sort.mod.desc": "Мод: по убыванию",
+  "gui.portableterminal.sort.none": "Не сортировано (нажмите)"
 }

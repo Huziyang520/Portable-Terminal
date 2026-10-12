@@ -23,5 +23,14 @@
   "config.portableterminal.terminal_rows": "终端显示行数",
   "config.portableterminal.terminal_rows.tooltip": "终端显示的行数（3-6）",
   "config.portableterminal.blacklist": "忽略的方块",
-  "config.portableterminal.blacklist.tooltip": "终端忽略的方块 ID，例如 minecraft:furnace"
+  "config.portableterminal.blacklist.tooltip": "终端忽略的方块 ID，例如 minecraft:furnace",
+  "gui.portableterminal.sort.name.asc": "名称：正序",
+  "gui.portableterminal.sort.name.desc": "名称：倒序",
+  "gui.portableterminal.sort.count.asc": "数量：由少到多",
+  "gui.portableterminal.sort.count.desc": "数量：由多到少",
+  "gui.portableterminal.sort.id.asc": "ID：正序",
+  "gui.portableterminal.sort.id.desc": "ID：倒序",
+  "gui.portableterminal.sort.mod.asc": "模组：正序",
+  "gui.portableterminal.sort.mod.desc": "模组：倒序",
+  "gui.portableterminal.sort.none": "未排序（点击启用）"
 }

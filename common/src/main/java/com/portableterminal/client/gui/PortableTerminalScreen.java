@@ -11,8 +11,10 @@ import com.portableterminal.network.OpenTerminalPacket;
 import com.portableterminal.network.TerminalSlotClickPacket;
 import com.portableterminal.platform.ClientSender;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.InputWithModifiers;
@@ -70,8 +72,17 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private final int guiWidth;
 	private final int guiHeight;
 
+	/** 重开界面后要恢复到的光标位置（GUI 坐标）；NaN 表示无需恢复。 */
+	private static double restoreGuiMouseX = Double.NaN;
+	private static double restoreGuiMouseY = Double.NaN;
+
+	private static final String[] SORT_KEYS = {"name", "count", "id", "mod"};
+
 	private EditBox searchBox;
 	private String lastSearchText = "";
+	private int lastMouseX;
+	private int lastMouseY;
+	private Component lastTooltip;
 	private boolean draggingScrollbar = false;
 	/** Shift + left button drag over the terminal slots: quick move every slot entered. */
 	private boolean draggingQuickMove = false;
@@ -166,6 +177,16 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		};
 	}
 
+	/** 排序按钮的悬浮提示：类型 + 当前方向，例如「数量：由多到少」。 */
+	private Component sortTooltip(int index) {
+		PortableTerminalMenu.SortDirection dir = this.menu.getSortDir(index);
+		if (dir == PortableTerminalMenu.SortDirection.NONE) {
+			return Component.translatable("gui.portableterminal.sort.none");
+		}
+		return Component.translatable("gui.portableterminal.sort." + SORT_KEYS[index] + "."
+			+ (dir == PortableTerminalMenu.SortDirection.ASC ? "asc" : "desc"));
+	}
+
 	private void cycleSort(int index) {
 		this.menu.cycleSortDir(index);
 	}
@@ -176,6 +197,10 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		if (next == this.rows) {
 			return;
 		}
+		// 槽位布局变了，服务端必须重建菜单，客户端随之重开界面；原版重开时会把光标
+		// 挪到屏幕正中，所以先记下当前位置，等新界面第一帧再放回去。
+		restoreGuiMouseX = this.lastMouseX;
+		restoreGuiMouseY = this.lastMouseY;
 		ModConfig.terminalRows = next;
 		ModConfig.save();
 		ClientSender.sendToServer(new OpenTerminalPacket(next));
@@ -214,6 +239,15 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 	@Override
 	public void extractBackground(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
+		// 重开界面后第一帧把光标放回切换前的位置（原版会把光标拉到屏幕正中）
+		if (!Double.isNaN(restoreGuiMouseX)) {
+			double scale = Minecraft.getInstance().getWindow().getGuiScale();
+			GLFW.glfwSetCursorPos(Minecraft.getInstance().getWindow().handle(),
+				restoreGuiMouseX * scale, restoreGuiMouseY * scale);
+			restoreGuiMouseX = Double.NaN;
+		}
+		this.lastMouseX = mouseX;
+		this.lastMouseY = mouseY;
 		int srcW = PortableTerminalLayout.PANEL_SOURCE_WIDTH;
 		int srcH = PortableTerminalLayout.PANEL_SOURCE_HEIGHT;
 		int headerH = PortableTerminalLayout.PANEL_HEADER_HEIGHT;
@@ -541,9 +575,15 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 				if (corner != null) {
 					int cornerSize = PortableTerminalLayout.CORNER_SIZE;
 					gfx.blitSprite(RenderPipelines.GUI_TEXTURED, corner,
-						this.getX() + BTN_SIZE - cornerSize,
+						this.getX() + BTN_SIZE - cornerSize - 1,
 						this.getY() + BTN_SIZE - cornerSize,
 						cornerSize, cornerSize);
+				}
+				// 悬浮提示：类型 + 当前方向，例如「数量：由多到少」
+				Component tip = sortTooltip(this.sortIndex);
+				if (!tip.equals(PortableTerminalScreen.this.lastTooltip)) {
+					PortableTerminalScreen.this.lastTooltip = tip;
+					this.setTooltip(Tooltip.create(tip));
 				}
 				if (this.highlighted.getAsBoolean()) {
 					gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.HIGHLIGHT_SPRITE,

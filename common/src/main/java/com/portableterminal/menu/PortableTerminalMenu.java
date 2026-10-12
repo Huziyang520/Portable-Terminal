@@ -186,6 +186,19 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 				}
 			}
 		}
+		// 取出/存入后服务端同步回来的顺序未必仍是当前排序结果（数量变了、物品没了），
+		// 这里统一按当前条件再排一次。所有显示路径都经过本方法，排序不会再错乱。
+		displayedItems.sort((a, b) -> {
+			for (int i = 0; i < sortDirs.length; i++) {
+				SortDirection dir = sortDirs[i];
+				if (dir == SortDirection.NONE) continue;
+				int cmp = compareBy(a, b, i);
+				if (cmp != 0) {
+					return dir == SortDirection.ASC ? cmp : -cmp;
+				}
+			}
+			return 0;
+		});
 	}
 
 	private boolean matchesSearch(ItemStack stack, String query) {

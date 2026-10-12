@@ -29,7 +29,8 @@ public final class PortableTerminalLayout {
 
 	public static final int INV_LEFT = PADDING + 1;
 
-	public static final int OFFHAND_X = -22;
+	/** 副手槽左缘与左侧按钮列左缘对齐（外框再向外 5px）。 */
+	public static final int OFFHAND_X = -25;
 
 	public static final int SEARCH_X = TERM_LEFT;
 	public static final int SEARCH_Y = 15;
@@ -44,7 +45,8 @@ public final class PortableTerminalLayout {
 	public static final int SORT_BTN_COUNT = 4;
 
 	// Row count pair, placed under the sort buttons.
-	public static final int ROWS_UP_BTN_Y = SORT_BTN_Y + SORT_BTN_COUNT * (BTN_SIZE + BTN_GAP) + 8;
+	// 行数按键紧贴排序按钮组：留 8px 时行数最少的面板上，减行键会与副手槽外框重叠。
+	public static final int ROWS_UP_BTN_Y = SORT_BTN_Y + SORT_BTN_COUNT * (BTN_SIZE + BTN_GAP) + 2;
 	public static final int ROWS_DOWN_BTN_Y = ROWS_UP_BTN_Y + BTN_SIZE + BTN_GAP;
 
 	// GUI sprites (assets/portableterminal/textures/gui/sprites/).
