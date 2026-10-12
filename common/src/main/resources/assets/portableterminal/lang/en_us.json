@@ -10,7 +10,7 @@
   "key.category.portableterminal.custom_category": "Portable Terminal",
   "msg.portableterminal.server_disabled": "The server has disabled the Portable Terminal mod.",
   "msg.portableterminal.no_containers": "No containers found nearby",
-  "modmenu.portableterminal.source": "Source",
+  "modmenu.portableterminal.feedback": "Feedback",
   "gui.portableterminal.sort.tooltip": "Click to cycle: off -> ascending -> descending",
   "gui.portableterminal.rows": "Rows: %s",
   "gui.portableterminal.rows.tooltip": "Change how many rows the terminal shows",

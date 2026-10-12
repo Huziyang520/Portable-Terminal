@@ -7,11 +7,6 @@
   "authors": [
     "${mod_author}"
   ],
-  "contact": {
-    "homepage": "https://github.com/Huziyang520/Portable-Terminal",
-    "sources": "https://github.com/Huziyang520/Portable-Terminal",
-    "issues": "https://github.com/Huziyang520/Portable-Terminal/issues"
-  },
   "license": "${license}",
   "icon": "icon.png",
   "environment": "*",
@@ -36,7 +31,7 @@
   "custom": {
     "modmenu": {
       "links": {
-        "modmenu.portableterminal.source": "https://github.com/Huziyang520/Portable-Terminal"
+        "modmenu.portableterminal.feedback": "https://github.com/Huziyang520/Portable-Terminal/issues"
       }
     }
   }

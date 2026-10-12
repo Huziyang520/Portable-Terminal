@@ -10,7 +10,7 @@
   "key.category.portableterminal.custom_category": "Portable Terminal",
   "msg.portableterminal.server_disabled": "Сервер отключил мод Portable Terminal.",
   "msg.portableterminal.no_containers": "Рядом не найдено контейнеров",
-  "modmenu.portableterminal.source": "Исходный код",
+  "modmenu.portableterminal.feedback": "Обратная связь",
   "gui.portableterminal.sort.tooltip": "Нажмите для переключения: выкл -> по возрастанию -> по убыванию",
   "gui.portableterminal.rows": "Строк: %s",
   "gui.portableterminal.rows.tooltip": "Изменить число отображаемых строк",

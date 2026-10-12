@@ -10,7 +10,7 @@
   "key.category.portableterminal.custom_category": "Portable Terminal",
   "msg.portableterminal.server_disabled": "서버에서 Portable Terminal 모드를 비활성화했습니다.",
   "msg.portableterminal.no_containers": "근처에 컨테이너가 없습니다",
-  "modmenu.portableterminal.source": "소스",
+  "modmenu.portableterminal.feedback": "피드백",
   "gui.portableterminal.sort.tooltip": "클릭하여 전환: 끔 -> 오름차순 -> 내림차순",
   "gui.portableterminal.rows": "행: %s",
   "gui.portableterminal.rows.tooltip": "터미널에 표시할 행 수 변경",

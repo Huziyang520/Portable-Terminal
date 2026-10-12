@@ -10,7 +10,7 @@
   "key.category.portableterminal.custom_category": "随身终端",
   "msg.portableterminal.server_disabled": "服务器已禁用随身终端模组。",
   "msg.portableterminal.no_containers": "附近没有找到容器",
-  "modmenu.portableterminal.source": "源码",
+  "modmenu.portableterminal.feedback": "备用反馈地址",
   "gui.portableterminal.sort.tooltip": "点击切换：关闭 → 升序 → 降序",
   "gui.portableterminal.rows": "行数：%s",
   "gui.portableterminal.rows.tooltip": "调整终端显示的行数",

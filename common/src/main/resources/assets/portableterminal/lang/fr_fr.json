@@ -10,7 +10,7 @@
   "key.category.portableterminal.custom_category": "Portable Terminal",
   "msg.portableterminal.server_disabled": "Le serveur a désactivé le mod Portable Terminal.",
   "msg.portableterminal.no_containers": "Aucun conteneur trouvé à proximité",
-  "modmenu.portableterminal.source": "Code source",
+  "modmenu.portableterminal.feedback": "Retour",
   "gui.portableterminal.sort.tooltip": "Cliquer pour changer : désactivé -> croissant -> décroissant",
   "gui.portableterminal.rows": "Lignes : %s",
   "gui.portableterminal.rows.tooltip": "Modifier le nombre de lignes affichées",

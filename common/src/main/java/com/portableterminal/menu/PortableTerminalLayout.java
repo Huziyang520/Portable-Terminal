@@ -36,28 +36,33 @@ public final class PortableTerminalLayout {
 	public static final int SEARCH_WIDTH = COLS * SLOT_SIZE;
 	public static final int SEARCH_HEIGHT = 12;
 
-	// Left hand side sort buttons (outside the panel, so they stay vanilla widgets).
-	public static final int SORT_BTN_X = -48;
+	// Left hand side square buttons (outside the panel, drawn from sprites).
+	public static final int BTN_SIZE = 18;
+	public static final int BTN_GAP = 2;
+	public static final int SORT_BTN_X = -30;
 	public static final int SORT_BTN_Y = TERM_TOP;
-	public static final int SORT_BTN_W = 48;
-	public static final int SORT_BTN_H = 20;
-	public static final int SORT_BTN_GAP = 2;
 	public static final int SORT_BTN_COUNT = 4;
 
-	// Row count switch, placed under the sort buttons.
-	public static final int ROWS_BTN_Y = SORT_BTN_Y + SORT_BTN_COUNT * (SORT_BTN_H + SORT_BTN_GAP) + 6;
+	// Row count pair, placed under the sort buttons.
+	public static final int ROWS_UP_BTN_Y = SORT_BTN_Y + SORT_BTN_COUNT * (BTN_SIZE + BTN_GAP) + 8;
+	public static final int ROWS_DOWN_BTN_Y = ROWS_UP_BTN_Y + BTN_SIZE + BTN_GAP;
 
 	// GUI sprites (assets/portableterminal/textures/gui/sprites/).
 	private static final String SPRITE_ROOT = "terminal/";
 	public static final Identifier SLOT_SPRITE = sprite("slot");
-	public static final Identifier SCROLL_THUMB_SPRITE = sprite("scroll_thumb");
+	/**
+	 * One nine-sliced panel sprite covers every row count: its vertical center band is exactly one
+	 * slot row and repeats ({@code stretch_inner=false}), so any number of rows renders crisply
+	 * from the same texture. See panel.png.mcmeta.
+	 */
+	public static final Identifier PANEL_SPRITE = sprite("panel");
+	public static final Identifier BUTTON_SPRITE = sprite("button");
+	public static final Identifier ARROW_UP_SPRITE = sprite("arrow_up");
+	public static final Identifier ARROW_DOWN_SPRITE = sprite("arrow_down");
+	public static final Identifier HIGHLIGHT_SPRITE = sprite("highlight");
 
 	public static Identifier sprite(String path) {
 		return Identifier.tryBuild(PortableTerminalMod.MOD_ID, SPRITE_ROOT + path);
-	}
-
-	public static Identifier panelSprite(int rows) {
-		return sprite("rows_" + clampRows(rows));
 	}
 
 	public static int clampRows(int rows) {
