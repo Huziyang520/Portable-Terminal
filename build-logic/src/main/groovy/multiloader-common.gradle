@@ -19,13 +19,38 @@ java {
     withSourcesJar()
 }
 
+// 1.20.2-1.20.4 档：NeoForm/vanilla 产物是 Java 21 字节码（major 65），javac 17 读不了它，
+// 会报“该文件内含版本 65.0, 应为 61.0”并导致整片符号解析失败。因此用 JDK 21 编译，
+// 再用 --release 把本模组产物字节码锁回区间下界的运行时档（1.20.2-1.20.4 仍跑 Java 17）。
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    def javaTarget = findProperty('java_target_version')
+    if (javaTarget != null) {
+        options.release = javaTarget.toString().toInteger()
+    }
 }
 
 tasks.withType(Javadoc).configureEach {
     options.encoding = 'UTF-8'
     options.addStringOption('Xdoclint:none', '-quiet')
+}
+
+
+repositories {
+    // 国内镜像优先；官方源在后。
+    maven { name = 'AliyunCentral'; url = 'https://maven.aliyun.com/repository/central' }
+    mavenCentral()
+    // ModDevGradle 会自己注入 NeoForged 源，但本机 maven.neoforged.net 不可达；
+    // 已缓存的元数据是按某个具体仓库形状落盘的，这里把常见几种形状都列出来让缓存 id 有机会命中
+    // （离线构建时只有命中缓存描述符的那一个才起作用）。
+    maven { name = 'NeoForge'; url = 'https://maven.neoforged.net/releases' }
+    maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases' }
+    maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases/' }
+    maven { name = 'NeoForgedReleases'; url = 'https://maven.neoforged.net/releases' }
+    maven { name = 'Mojang'; url = 'https://libraries.minecraft.net/' }
+    maven { name = 'Forge'; url = 'https://maven.minecraftforge.net/' }
+    maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+    maven { name = 'Sponge'; url = 'https://repo.spongepowered.org/repository/maven-public' }
 }
 
 tasks.withType(Jar).configureEach {
@@ -49,26 +74,21 @@ jar {
 }
 
 processResources {
-    var expandProps = [
-            'version'                      : version,
-            'group'                        : project.group, //Else we target the task's group.
-            'minecraft_version'            : minecraft_version,
-            'minecraft_version_range'      : minecraft_version_range,
-            'fabric_minecraft_range'       : fabric_minecraft_range,
-            'mc_range_label'               : mc_range_label,
-            'fabric_version'               : fabric_version,
-            'fabric_loader_version'        : fabric_loader_version,
-            'mod_name'                     : mod_name,
-            'mod_author'                   : mod_author,
-            'mod_id'                       : mod_id,
-            'license'                      : license,
-            'description'                  : project.description,
-            'neoforge_version'             : neoforge_version,
-            'neoforge_version_range'       : neoforge_version_range,
-            'neoforge_loader_version_range': neoforge_loader_version_range,
-            'credits'                      : credits,
-            'java_version'                 : java_version
+    // 容忍缺项：区间不同时并不存在 neoforge_* / forge_* 两组属性。
+    var expandKeys = [
+            'version', 'group', 'minecraft_version', 'minecraft_version_range', 'fabric_minecraft_range',
+            'mc_range_label', 'fabric_version', 'fabric_loader_version', 'mod_name', 'mod_author',
+            'mod_id', 'license', 'description', 'credits', 'java_version',
+            'neoforge_version', 'neoforge_version_range', 'neoforge_loader_version_range',
+            'forge_version', 'forge_loader_version_range'
     ]
+    var expandProps = [:]
+    expandKeys.each { key ->
+        def value = findProperty(key)
+        if (value != null) {
+            expandProps[key] = value
+        }
+    }
 
     var jsonExpandProps = expandProps.collectEntries {
         key, value -> [(key): value instanceof String ? value.replace('\n', '\\\\n') : value]
@@ -90,11 +110,6 @@ publishing {
         register('mavenJava', MavenPublication) {
             artifactId base.archivesName.get()
             from components.java
-        }
-    }
-    repositories {
-        maven {
-            url System.getenv('local_maven_url')
         }
     }
 }

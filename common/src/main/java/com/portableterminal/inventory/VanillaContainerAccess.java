@@ -42,7 +42,7 @@ public record VanillaContainerAccess(Container container) implements ItemAccess 
 			container.setChanged();
 			return stack.copyWithCount(stack.getCount() - place);
 		}
-		if (!ItemStack.isSameItemSameComponents(slotStack, stack)) {
+		if (!ItemStack.isSameItemSameTags(slotStack, stack)) {
 			return stack;
 		}
 		int space = limit - slotStack.getCount();

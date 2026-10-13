@@ -5,33 +5,38 @@ import com.portableterminal.menu.PortableTerminalMenu;
 import com.portableterminal.platform.Services;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 
 import java.util.List;
 
 /**
  * Asks the server to open the terminal.
  *
- * <p>{@code rows} is the client's terminal height setting. It travels with the request so the
- * server builds the menu with exactly the same slot layout the client expects — the menu layout
- * cannot be derived independently on the two sides.</p>
+ * <p>1.20.2~1.20.4 has no {@code StreamCodec}/{@code RegistryFriendlyByteBuf}: a payload is just
+ * {@code id()} + {@code write(FriendlyByteBuf)}, and the reader is a {@code FriendlyByteBuf.Reader}
+ * handed to the loader's registrar. The field design is unchanged from the other branches:
+ * {@code rows} is the client's terminal height setting, carried so the server builds the menu with
+ * exactly the same slot layout the client expects.</p>
  */
 public record OpenTerminalPacket(int rows) implements CustomPacketPayload {
-	public static final CustomPacketPayload.Type<OpenTerminalPacket> TYPE =
-		new CustomPacketPayload.Type<>(Identifier.tryBuild("portableterminal", "open_terminal"));
 
-	public static final StreamCodec<FriendlyByteBuf, OpenTerminalPacket> CODEC = StreamCodec.of(
-		(buf, packet) -> buf.writeByte(PortableTerminalLayout.clampRows(packet.rows())),
-		buf -> new OpenTerminalPacket(buf.readByte())
-	);
+	public static final ResourceLocation ID = ResourceLocation.tryBuild("portableterminal", "open_terminal");
 
 	@Override
-	public Type<? extends CustomPacketPayload> type() {
-		return TYPE;
+public ResourceLocation id() {
+		return ID;
+	}
+
+	@Override
+public void write(FriendlyByteBuf buf) {
+		buf.writeByte(PortableTerminalLayout.clampRows(rows));
+	}
+
+	public static OpenTerminalPacket read(FriendlyByteBuf buf) {
+		return new OpenTerminalPacket(buf.readByte());
 	}
 
 	/** Server side handling; invoked by the loader's packet bootstrap. */
