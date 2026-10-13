@@ -43,3 +43,18 @@ neoForge {
         }
     }
 }
+
+// 20.x 的 net.neoforged:neoforge 会经 net.minecraftforge:unsafe:0.2.0 传递依赖 log4j 的动态版本
+// （2.11.+）。动态版本需要先取模块的版本清单，而本机对 maven.neoforged.net 不可达、拉清单会一直挂住；
+// 这里直接钉到 2.11.+ 实际会解析到的 2.11.2（本地缓存里已有），构建结果不变且不再依赖联网。
+configurations.configureEach {
+    resolutionStrategy.eachDependency { details ->
+        // 只钉「动态版本」那一条：net.minecraftforge:unsafe 传递过来的是 log4j 的 2.11.+，
+        // 动态版本要先取模块版本清单，而这份清单本机拿不到（解析它的仓库都指向不可达的
+        // maven.neoforged.net，联网会卡在重试上）。其余 log4j 依赖是 minecraft-dependencies
+        // 里的 strict 2.22.1，保持不动；最终版本本来就是 2.22.1，行为与联网解析一致。
+        if (details.requested.group == 'org.apache.logging.log4j' && details.requested.version.endsWith('+')) {
+            details.useVersion '2.22.1'
+        }
+    }
+}
