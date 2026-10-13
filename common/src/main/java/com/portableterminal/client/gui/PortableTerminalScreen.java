@@ -10,19 +10,17 @@ import com.portableterminal.menu.PortableTerminalMenu;
 import com.portableterminal.network.OpenTerminalPacket;
 import com.portableterminal.network.TerminalSlotClickPacket;
 import com.portableterminal.platform.ClientSender;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.input.InputWithModifiers;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -36,11 +34,10 @@ import java.util.function.Supplier;
 /**
  * The terminal GUI.
  *
- * <p>Everything inside the panel — frame, slot wells and the scrollbar track — comes from a single
- * nine-sliced sprite ({@code terminal/panel}); its vertical center band is exactly one slot row and
- * repeats, so every row count renders crisply from one texture. Its four corners are literal copies
- * of vanilla's {@code generic_54.png} corners and the slot cells are vanilla's own
- * {@code container/slot.png}.</p>
+ * <p>Everything inside the panel -- frame, slot wells and the scrollbar track -- comes from a single
+ * sprite ({@code terminal/panel}) that is drawn as three 1:1 slices: header, one slot row (repeated
+ * once per row) and footer. Its four corners are literal copies of vanilla's
+ * {@code generic_54.png} corners and the slot cells are vanilla's own {@code container/slot.png}.</p>
  *
  * <p>The six buttons on the left are drawn as square sprite buttons. Nothing is ever greyed out:
  * a sort field that is active is highlighted instead, and every button stays clickable at all
@@ -52,7 +49,6 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private static final int SLOT_SIZE = PortableTerminalLayout.SLOT_SIZE;
 	private static final int TERM_LEFT = PortableTerminalLayout.TERM_LEFT;
 	private static final int TERM_TOP = PortableTerminalLayout.TERM_TOP;
-	private static final int INV_LEFT = PortableTerminalLayout.INV_LEFT;
 	private static final int SCROLLBAR_LEFT = PortableTerminalLayout.SCROLLBAR_LEFT;
 	private static final int SCROLLBAR_WIDTH = PortableTerminalLayout.SCROLLBAR_WIDTH;
 	private static final int SCROLLBAR_TOP = PortableTerminalLayout.SCROLLBAR_TOP;
@@ -98,11 +94,13 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private final List<IconButton> sortButtons = new ArrayList<>();
 
 	public PortableTerminalScreen(PortableTerminalMenu menu, Inventory playerInventory, Component title) {
-		super(menu, playerInventory, title,
-			PortableTerminalLayout.IMAGE_WIDTH, PortableTerminalLayout.imageHeight(menu.getRows()));
+		super(menu, playerInventory, title);
 		this.rows = menu.getRows();
 		this.guiWidth = PortableTerminalLayout.IMAGE_WIDTH;
 		this.guiHeight = PortableTerminalLayout.imageHeight(this.rows);
+		// 1.21.x 的 AbstractContainerScreen 构造器不带尺寸，尺寸是这两个 protected 字段。
+		this.imageWidth = this.guiWidth;
+		this.imageHeight = this.guiHeight;
 		this.cachedTotalRows = this.rows;
 		this.titleLabelX = PortableTerminalLayout.PADDING;
 		this.titleLabelY = 5;
@@ -170,7 +168,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	}
 
 	/** 排序类型被选中时右下角要显示的角标；未选中返回 null（只显示类型图标）。 */
-	private Identifier sortCornerArrow(int index) {
+	private ResourceLocation sortCornerArrow(int index) {
 		return switch (this.menu.getSortDir(index)) {
 			case NONE -> null;
 			case ASC -> PortableTerminalLayout.CORNER_UP_SPRITE;
@@ -224,29 +222,29 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	}
 
 	@Override
-	public boolean keyPressed(KeyEvent event) {
+	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
 		if (this.searchBox != null && this.getFocused() == this.searchBox) {
-			if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
+			if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
 				this.searchBox.setFocused(false);
 				this.setFocused(null);
 				return true;
 			}
-			this.searchBox.keyPressed(event);
+			this.searchBox.keyPressed(keyCode, scanCode, modifiers);
 			return true;
 		}
-		return super.keyPressed(event);
+		return super.keyPressed(keyCode, scanCode, modifiers);
 	}
 
-	// ==================== 背景：九宫格面板贴图 ====================
+	// ==================== 背景：三段 1:1 分片的面板贴图 ====================
 
 	@Override
-	public void extractBackground(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
+	protected void renderBg(GuiGraphics gfx, float partialTick, int mouseX, int mouseY) {
 		// 切行数会重开界面，而原版开界面时 MouseHandler.releaseMouse() 会把光标挪到屏幕正中；
 		// 它的时机可能晚于新界面的第一帧，所以连续压几帧再放弃，避免和它抢。
 		if (!Double.isNaN(restoreGuiMouseX)) {
 			if (restoreFrames-- > 0) {
 				double scale = Minecraft.getInstance().getWindow().getGuiScale();
-				GLFW.glfwSetCursorPos(Minecraft.getInstance().getWindow().handle(),
+				GLFW.glfwSetCursorPos(Minecraft.getInstance().getWindow().getWindow(),
 					restoreGuiMouseX * scale, restoreGuiMouseY * scale);
 			} else {
 				restoreGuiMouseX = Double.NaN;
@@ -263,13 +261,13 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		// 同一张贴图分三段 1:1 贴：表头 / 一行槽位（按行数重复）/ 页脚。
 		// 不能用九宫格缩放：它会按目标高度的一半钳制每条边，页脚高于面板一半时中间带
 		// 会被取成长度不对的片段，格子与物品就会错位（行数越少越明显）。
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE,
+		gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.PANEL_SPRITE,
 			srcW, srcH, 0, 0, x, y, this.guiWidth, headerH);
 		for (int row = 0; row < this.rows; row++) {
-			gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE,
+			gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.PANEL_SPRITE,
 				srcW, srcH, 0, headerH, x, y + headerH + row * SLOT_SIZE, this.guiWidth, SLOT_SIZE);
 		}
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE,
+		gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.PANEL_SPRITE,
 			srcW, srcH, 0, headerH + SLOT_SIZE,
 			x, y + headerH + this.rows * SLOT_SIZE, this.guiWidth, PortableTerminalLayout.PANEL_FOOTER_HEIGHT);
 
@@ -277,7 +275,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		int offX = x + PortableTerminalLayout.OFFHAND_X;
 		int offY = y + PortableTerminalLayout.offhandY(this.rows);
 		drawFramePanel(gfx, offX - 5, offY - 5, SLOT_SIZE + 8, SLOT_SIZE + 8);
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.SLOT_SPRITE,
+		gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.SLOT_SPRITE,
 			offX - 1, offY - 1, SLOT_SIZE, SLOT_SIZE);
 
 		drawScrollbarThumb(gfx);
@@ -287,25 +285,25 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	 * 用面板贴图的边角，画一个带原版圆角边框的小面板（副手槽的外框）。
 	 * 全部取自同一张贴图，四角就是原版容器的 7×7 角块。
 	 */
-	private void drawFramePanel(GuiGraphicsExtractor gfx, int x, int y, int w, int h) {
+	private void drawFramePanel(GuiGraphics gfx, int x, int y, int w, int h) {
 		int srcW = PortableTerminalLayout.PANEL_SOURCE_WIDTH;
 		int srcH = PortableTerminalLayout.PANEL_SOURCE_HEIGHT;
 		// 内部
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE,
+		gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.PANEL_SPRITE,
 			srcW, srcH, 3, 3, x + 3, y + 3, w - 6, h - 6);
 		// 四条直边
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 7, 0, x + 7, y, w - 14, 3);
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 7, srcH - 3, x + 7, y + h - 3, w - 14, 3);
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, 7, x, y + 7, 3, h - 14);
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 3, 7, x + w - 3, y + 7, 3, h - 14);
+		gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 7, 0, x + 7, y, w - 14, 3);
+		gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 7, srcH - 3, x + 7, y + h - 3, w - 14, 3);
+		gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, 7, x, y + 7, 3, h - 14);
+		gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 3, 7, x + w - 3, y + 7, 3, h - 14);
 		// 四角
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, 0, x, y, 7, 7);
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 7, 0, x + w - 7, y, 7, 7);
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, srcH - 7, x, y + h - 7, 7, 7);
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 7, srcH - 7, x + w - 7, y + h - 7, 7, 7);
+		gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, 0, x, y, 7, 7);
+		gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 7, 0, x + w - 7, y, 7, 7);
+		gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, srcH - 7, x, y + h - 7, 7, 7);
+		gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 7, srcH - 7, x + w - 7, y + h - 7, 7, 7);
 	}
 
-	private void drawScrollbarThumb(GuiGraphicsExtractor gfx) {
+	private void drawScrollbarThumb(GuiGraphics gfx) {
 		int sx = this.leftPos + SCROLLBAR_LEFT;
 		int sy = this.topPos + SCROLLBAR_TOP;
 		int trackHeight = PortableTerminalLayout.scrollbarHeight(this.rows);
@@ -332,29 +330,29 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	}
 
 	@Override
-	public void extractLabels(GuiGraphicsExtractor gfx, int mouseX, int mouseY) {
-		gfx.text(this.font, this.title, this.titleLabelX, this.titleLabelY, COL_TEXT, false);
-		gfx.text(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, COL_TEXT, false);
+	protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
+		gfx.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, COL_TEXT, false);
+		gfx.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, COL_TEXT, false);
 	}
 
 	// ==================== 终端槽位自定义渲染 ====================
 
 	@Override
-	protected void extractSlot(GuiGraphicsExtractor gfx, Slot slot, int mouseX, int mouseY) {
+	protected void renderSlot(GuiGraphics gfx, Slot slot) {
 		if (slot instanceof PortableTerminalMenu.TerminalSlot) {
 			int x = slot.x;
 			int y = slot.y;
 			ItemStack itemStack = slot.getItem();
 			if (!itemStack.isEmpty()) {
 				int seed = slot.x + slot.y * this.imageWidth;
-				gfx.item(itemStack, x, y, seed);
+				gfx.renderItem(itemStack, x, y, seed);
 				int count = itemStack.getCount();
 				if (count != 1) {
 					drawScaledCount(gfx, formatCount(count), x, y);
 				}
 			}
 		} else {
-			super.extractSlot(gfx, slot, mouseX, mouseY);
+			super.renderSlot(gfx, slot);
 		}
 	}
 
@@ -366,7 +364,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	}
 
 	/** 自适应缩放绘制数量数字：基础 0.7 倍，文字过宽时自动缩小以适配 16px 槽位 */
-	private void drawScaledCount(GuiGraphicsExtractor gfx, String text, int slotX, int slotY) {
+	private void drawScaledCount(GuiGraphics gfx, String text, int slotX, int slotY) {
 		float baseScale = 0.7f;
 		int maxWidth = 15;
 		float textWidth = this.font.width(text);
@@ -374,28 +372,25 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		if (textWidth * baseScale > maxWidth) {
 			scale = maxWidth / textWidth;
 		}
-		gfx.pose().pushMatrix();
+		gfx.pose().pushPose();
 		float drawX = slotX + 16 - textWidth * scale - 1;
 		float drawY = slotY + 16 - 8 * scale - 1;
-		gfx.pose().translate(drawX, drawY);
-		gfx.pose().scale(scale, scale);
-		gfx.text(this.font, text, 0, 0, 0xFFFFFFFF, true);
-		gfx.pose().popMatrix();
+		gfx.pose().translate(drawX, drawY, 0.0F);
+		gfx.pose().scale(scale, scale, 1.0F);
+		gfx.drawString(this.font, text, 0, 0, 0xFFFFFFFF, true);
+		gfx.pose().popPose();
 	}
 
 	// ==================== 鼠标交互 ====================
 
 	@Override
-	public boolean mouseClicked(MouseButtonEvent event, boolean inside) {
-		double mouseX = event.x();
-		double mouseY = event.y();
-		int button = event.button();
-		boolean hasShift = event.hasShiftDown();
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		boolean hasShift = Screen.hasShiftDown();
 
 		if (isInSearchBox(mouseX, mouseY)) {
 			this.setFocused(this.searchBox);
 			this.searchBox.setFocused(true);
-			this.searchBox.mouseClicked(event, inside);
+			this.searchBox.mouseClicked(mouseX, mouseY, button);
 			return true;
 		}
 
@@ -431,12 +426,12 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 				return true;
 			}
 
-			Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(shown.getItem());
+			ResourceLocation itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(shown.getItem());
 			ClientSender.sendToServer(new TerminalSlotClickPacket(itemId, button, hasShift));
 			return true;
 		}
 
-		return super.mouseClicked(event, inside);
+		return super.mouseClicked(mouseX, mouseY, button);
 	}
 
 	/** 触发一次「受击槽位 → 玩家背包」的整组转移；同一格只触发一次。 */
@@ -450,25 +445,25 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		if (shown.isEmpty()) {
 			return;
 		}
-		Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(shown.getItem());
+		ResourceLocation itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(shown.getItem());
 		ClientSender.sendToServer(new TerminalSlotClickPacket(itemId, 0, true));
 	}
 
 	@Override
-	public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+	public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
 		if (draggingScrollbar) {
-			scrollToMouse(event.y());
+			scrollToMouse(mouseY);
 			return true;
 		}
 		if (draggingQuickMove) {
-			quickMoveHoveredSlot((int) event.x(), (int) event.y());
+			quickMoveHoveredSlot((int) mouseX, (int) mouseY);
 			return true;
 		}
-		return super.mouseDragged(event, dragX, dragY);
+		return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
 	}
 
 	@Override
-	public boolean mouseReleased(MouseButtonEvent event) {
+	public boolean mouseReleased(double mouseX, double mouseY, int button) {
 		if (draggingScrollbar) {
 			draggingScrollbar = false;
 			return true;
@@ -478,7 +473,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			lastQuickMoveSlot = -1;
 			return true;
 		}
-		return super.mouseReleased(event);
+		return super.mouseReleased(mouseX, mouseY, button);
 	}
 
 	private void scrollToMouse(double mouseY) {
@@ -549,13 +544,13 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	 * 因此不存在"置灰"外观；被选中的排序项改用高亮贴图表意。也没有任何悬浮提示。</p>
 	 */
 	private class IconButton extends AbstractButton {
-		private final Supplier<Identifier> arrow;
+		private final Supplier<ResourceLocation> arrow;
 		private final BooleanSupplier highlighted;
 		private final Runnable action;
 		/** 排序字段索引；行数按键为负数。 */
 		private final int sortIndex;
 
-		IconButton(int x, int y, Supplier<Identifier> arrow, BooleanSupplier highlighted,
+		IconButton(int x, int y, Supplier<ResourceLocation> arrow, BooleanSupplier highlighted,
 				Runnable action, int sortIndex) {
 			super(x, y, BTN_SIZE, BTN_SIZE, Component.empty());
 			this.arrow = arrow;
@@ -565,22 +560,22 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		}
 
 		@Override
-		public void onPress(InputWithModifiers input) {
+		public void onPress() {
 			this.action.run();
 		}
 
 		@Override
-		protected void extractContents(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
+		protected void renderWidget(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
 			if (this.sortIndex >= 0) {
 				// 底图 = 该排序类型自己的图标（名称 / 数量 / ID / 模组）
-				gfx.blitSprite(RenderPipelines.GUI_TEXTURED,
+				gfx.blitSprite(RenderType::guiTextured,
 					PortableTerminalLayout.sortIconSprite(this.sortIndex),
 					this.getX(), this.getY(), BTN_SIZE, BTN_SIZE);
 				// 右下角角标 = 当前状态；正序朝上、倒序朝下，未选中则不画
-				Identifier corner = sortCornerArrow(this.sortIndex);
+				ResourceLocation corner = sortCornerArrow(this.sortIndex);
 				if (corner != null) {
 					int cornerSize = PortableTerminalLayout.CORNER_SIZE;
-					gfx.blitSprite(RenderPipelines.GUI_TEXTURED, corner,
+					gfx.blitSprite(RenderType::guiTextured, corner,
 						this.getX() + BTN_SIZE - cornerSize - 1,
 						this.getY() + BTN_SIZE - cornerSize - 1,
 						cornerSize, cornerSize);
@@ -592,16 +587,16 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 					this.setTooltip(Tooltip.create(tip));
 				}
 				if (this.highlighted.getAsBoolean()) {
-					gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.HIGHLIGHT_SPRITE,
+					gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.HIGHLIGHT_SPRITE,
 						this.getX(), this.getY(), BTN_SIZE, BTN_SIZE);
 				}
 			} else {
 				// 行数按键：通用按钮底 + 大箭头
-				gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.BUTTON_SPRITE,
+				gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.BUTTON_SPRITE,
 					this.getX(), this.getY(), BTN_SIZE, BTN_SIZE);
-				Identifier icon = this.arrow.get();
+				ResourceLocation icon = this.arrow.get();
 				if (icon != null) {
-					gfx.blitSprite(RenderPipelines.GUI_TEXTURED, icon,
+					gfx.blitSprite(RenderType::guiTextured, icon,
 						this.getX(), this.getY(), BTN_SIZE, BTN_SIZE);
 				}
 			}

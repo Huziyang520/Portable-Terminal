@@ -9,7 +9,6 @@ import com.portableterminal.menu.ModMenuTypes;
 import com.portableterminal.network.TerminalItemsSyncPacket;
 import com.portableterminal.platform.ClientSender;
 import com.portableterminal.platform.Services;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -19,8 +18,8 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 @Mod(value = PortableTerminalMod.MOD_ID, dist = Dist.CLIENT)
@@ -29,7 +28,8 @@ public class PortableTerminalNeoForgeClient {
 	public PortableTerminalNeoForgeClient(IEventBus modBus, ModContainer container) {
 		PortableTerminalClient.initClient();
 
-		ClientSender.install(ClientPacketDistributor::sendToServer);
+		// 1.21.x 的客户端发包入口与服务端同在一个类里。
+		ClientSender.install(PacketDistributor::sendToServer);
 
 		// Optional: the config button only exists when Cloth Config is installed.
 		if (clothConfigLoaded()) {
@@ -51,9 +51,8 @@ public class PortableTerminalNeoForgeClient {
 	}
 
 	private void registerKeyMappings(RegisterKeyMappingsEvent event) {
-		KeyMapping.Category category = new KeyMapping.Category(KeyBindHandler.CATEGORY_ID);
-		event.registerCategory(category);
-		event.register(KeyBindHandler.createMapping(category));
+		// 本档没有 KeyMapping.Category 对象，分类就是一个翻译键字符串。
+		event.register(KeyBindHandler.createMapping(KeyBindHandler.CATEGORY_KEY));
 	}
 
 	private void registerMenuScreens(RegisterMenuScreensEvent event) {

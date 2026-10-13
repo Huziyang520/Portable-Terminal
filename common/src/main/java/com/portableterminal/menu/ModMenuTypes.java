@@ -3,7 +3,7 @@ package com.portableterminal.menu;
 import com.portableterminal.PortableTerminalMod;
 import com.portableterminal.config.ModConfig;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.inventory.MenuType;
 
@@ -24,7 +24,7 @@ import java.util.List;
  */
 public final class ModMenuTypes {
 
-	public static final Identifier ID = Identifier.tryBuild(PortableTerminalMod.MOD_ID, "portable_terminal");
+	public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(PortableTerminalMod.MOD_ID, "portable_terminal");
 
 	private static MenuType<PortableTerminalMenu> portableTerminal;
 
