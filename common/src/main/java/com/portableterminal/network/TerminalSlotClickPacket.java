@@ -4,10 +4,10 @@
 package com.portableterminal.network;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -17,18 +17,18 @@ import com.portableterminal.PortableTerminalMod;
 import com.portableterminal.menu.PortableTerminalMenu;
 import com.portableterminal.platform.Services;
 
-public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shift) implements CustomPacketPayload {
+public record TerminalSlotClickPacket(ResourceLocation itemId, int button, boolean shift) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<TerminalSlotClickPacket> TYPE =
-		new CustomPacketPayload.Type<>(Identifier.tryBuild(PortableTerminalMod.MOD_ID, "terminal_slot_click"));
+		new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(PortableTerminalMod.MOD_ID, "terminal_slot_click"));
 
-	public static final StreamCodec<FriendlyByteBuf, TerminalSlotClickPacket> CODEC = StreamCodec.of(
+	public static final StreamCodec<RegistryFriendlyByteBuf, TerminalSlotClickPacket> CODEC = StreamCodec.of(
 		(buf, val) -> {
-			buf.writeIdentifier(val.itemId);
+			buf.writeResourceLocation(val.itemId);
 			buf.writeByte(val.button);
 			buf.writeBoolean(val.shift);
 		},
 		buf -> new TerminalSlotClickPacket(
-			buf.readIdentifier(),
+			buf.readResourceLocation(),
 			buf.readByte(),
 			buf.readBoolean()
 		)
@@ -39,7 +39,7 @@ public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shi
 		return TYPE;
 	}
 
-	private static final Identifier DEPOSIT_MARKER = Identifier.tryBuild("portableterminal", "deposit");
+	private static final ResourceLocation DEPOSIT_MARKER = ResourceLocation.fromNamespaceAndPath("portableterminal", "deposit");
 
 	public static TerminalSlotClickPacket deposit() {
 		return new TerminalSlotClickPacket(DEPOSIT_MARKER, 0, false);
@@ -67,7 +67,7 @@ public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shi
 
 		ItemStack template = null;
 		for (ItemStack stack : psm.getAggregatedItems()) {
-			Identifier stackId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+			ResourceLocation stackId = BuiltInRegistries.ITEM.getKey(stack.getItem());
 			if (stackId != null && stackId.equals(packet.itemId())) {
 				template = stack;
 				break;

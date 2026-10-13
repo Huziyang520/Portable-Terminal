@@ -1,9 +1,9 @@
-accessWidener	v2	official
+accessWidener	v2	named
 
 # Keep in sync with common/src/main/resources/META-INF/accesstransformer.cfg
-# (descriptors verified with javap against the 26.2 client jar).
+# (descriptors verified with javap against the target client jar).
 
-# vanilla 26.2 made the MenuType constructor private and MenuType$MenuSupplier
+# vanilla made the MenuType constructor private and MenuType$MenuSupplier
 # package-private; mods must widen both to register their own menu type.
 accessible class net/minecraft/world/inventory/MenuType$MenuSupplier
 accessible method net/minecraft/world/inventory/MenuType <init> (Lnet/minecraft/world/inventory/MenuType$MenuSupplier;Lnet/minecraft/world/flag/FeatureFlagSet;)V

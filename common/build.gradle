@@ -1,13 +1,10 @@
 plugins {
     id 'multiloader-common'
-    id 'net.neoforged.moddev'
-}
+
+    id 'net.neoforged.moddev'}
 
 neoForge {
     neoFormVersion = neo_form_version
-    // The same access transformer ships in the common resources so both the common
-    // compile classpath and the NeoForge runtime see the widened members; the Fabric
-    // side mirrors every entry in portableterminal.accesswidener.
     def at = file('src/main/resources/META-INF/accesstransformer.cfg')
     if (at.exists()) {
         accessTransformers.from(at.absolutePath)
@@ -16,21 +13,14 @@ neoForge {
 
 repositories {
     // Optional integrations: never bundled, only compiled against, and guarded at runtime.
-    maven { url = 'https://maven.shedaniel.me/' }            // Cloth Config
+    maven { url = 'https://maven.shedaniel.me/' }                // Cloth Config
     maven { url = 'https://maven.terraformersmc.com/releases/' } // Mod Menu
 }
 
 dependencies {
-    // Fabric and NeoForge both bundle Fabric Mixin, so it is safe to use it in common
-    // If you need to update, check what version they are using to see what is compatible
-    // https://github.com/neoforged/NeoForge/blob/26.2.x/gradle.properties#L37
-    // https://github.com/FabricMC/fabric-loader/blob/master/gradle.properties#L12
-    compileOnly('net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7')
-    // Fabric and NeoForge both bundle MixinExtras, so it is safe to use it in common
-    compileOnly(annotationProcessor('io.github.llamalad7:mixinextras-common:0.5.3'))
-
     // Optional: config screen. Cloth Config is not a required dependency.
-    compileOnly('me.shedaniel.cloth:cloth-config-fabric:26.2.155') { transitive = false }
+    // common 由 ModDevGradle 以官方映射编译，fabric 工件是 intermediary 的，只能引 neoforge 工件。
+    compileOnly('me.shedaniel.cloth:cloth-config-neoforge:15.0.140') { transitive = false }
 }
 
 configurations {
@@ -47,25 +37,4 @@ configurations {
 artifacts {
     commonJava sourceSets.main.java.sourceDirectories.singleFile
     commonResources sourceSets.main.resources.sourceDirectories.singleFile
-}
-
-// Implement mcgradleconventions loader attribute.
-// `matching { ... }.configureEach` instead of `named(...)`: the javadoc/sources
-// element configurations do not all exist for every module.
-def loaderAttribute = Attribute.of('io.github.mcgradleconventions.loader', String)
-['apiElements', 'runtimeElements', 'sourcesElements', 'javadocElements'].each { variant ->
-    configurations.matching { it.name == variant }.configureEach {
-        attributes {
-            attribute(loaderAttribute, 'common')
-        }
-    }
-}
-sourceSets.configureEach {
-    [it.compileClasspathConfigurationName, it.runtimeClasspathConfigurationName].each { variant ->
-        configurations.matching { it.name == variant }.configureEach {
-            attributes {
-                attribute(loaderAttribute, 'common')
-            }
-        }
-    }
 }
