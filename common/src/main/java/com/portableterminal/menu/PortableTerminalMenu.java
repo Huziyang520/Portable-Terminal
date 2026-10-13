@@ -5,6 +5,8 @@
 package com.portableterminal.menu;
 
 import com.portableterminal.config.ModConfig;
+import com.portableterminal.inventory.ItemAccess;
+import com.portableterminal.inventory.VanillaContainerAccess;
 import com.portableterminal.network.TerminalItemsSyncPacket;
 import com.portableterminal.platform.Services;
 import com.portableterminal.util.PinyinSearch;
@@ -52,7 +54,7 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 
 	private static final Map<UUID, List<BlockPos>> PENDING_POSITIONS = new HashMap<>();
 	private final List<BlockPos> containerPositions = new ArrayList<>();
-	private final List<Container> containers = new ArrayList<>();
+	private final List<ItemAccess> containers = new ArrayList<>();
 	private final Player player;
 	private final List<ItemStack> aggregatedItems = new ArrayList<>();
 	private final List<ItemStack> displayedItems = new ArrayList<>();
@@ -90,8 +92,8 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		Level level = playerInventory.player.level();
 		for (BlockPos pos : containerPositions) {
 			BlockEntity be = level.getBlockEntity(pos);
-			Container handler = containerAt(be);
-			if (handler != null) containers.add(handler);
+			ItemAccess access = accessAt(be);
+			if (access != null) containers.add(access);
 		}
 
 		loadSortConfig();
@@ -264,9 +266,9 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 			BlockPos pos = containerPositions.get(i);
 			if (!playerPos.closerThan(pos, ModConfig.scanRadius + 1)) continue;
 			BlockEntity be = level.getBlockEntity(pos);
-			Container handler = containerAt(be);
-			if (handler != null) {
-				if (i < containers.size()) containers.set(i, handler);
+			ItemAccess access = accessAt(be);
+			if (access != null) {
+				if (i < containers.size()) containers.set(i, access);
 				return true;
 			}
 		}
@@ -323,10 +325,11 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		aggregatedItems.clear();
 		// 使用 LinkedHashMap 保持插入顺序，避免存取后物品排列错乱
 		Map<String, ItemStack> map = new LinkedHashMap<>();
-		for (Container container : containers) {
-			for (int i = 0; i < container.getContainerSize(); i++) {
-				ItemStack stack = container.getItem(i);
-				if (stack.isEmpty()) continue;
+		List<ItemStack> slots = new ArrayList<>();
+		for (ItemAccess access : containers) {
+			slots.clear();
+			ItemAccess.collectSlots(access, slots);
+			for (ItemStack stack : slots) {
 				String key = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
 				if (!stack.getComponentsPatch().isEmpty()) {
 					key = key + "|" + ItemStack.hashItemAndComponents(stack);
@@ -379,22 +382,17 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 	public ItemStack extractFromContainers(ItemStack template, int count) {
 		ItemStack extracted = ItemStack.EMPTY;
 		int remaining = count;
-		for (Container container : containers) {
-			for (int i = 0; i < container.getContainerSize() && remaining > 0; i++) {
-				ItemStack stack = container.getItem(i);
-				if (stack.isEmpty()) continue;
-				if (!ItemStack.isSameItemSameComponents(stack, template)) continue;
-				int take = Math.min(remaining, stack.getCount());
-				if (extracted.isEmpty()) {
-					extracted = stack.copyWithCount(take);
-				} else {
-					extracted.grow(take);
-				}
-				stack.shrink(take);
-				container.setItem(i, stack.isEmpty() ? ItemStack.EMPTY : stack);
-				container.setChanged();
-				remaining -= take;
+		// 跨容器按模板取；「怎么找、怎么扣」的规则在 ItemAccess.extractMatching，两端一致
+		for (ItemAccess access : containers) {
+			if (remaining <= 0) break;
+			ItemStack taken = ItemAccess.extractMatching(access, template, remaining);
+			if (taken.isEmpty()) continue;
+			if (extracted.isEmpty()) {
+				extracted = taken;
+			} else {
+				extracted.grow(taken.getCount());
 			}
+			remaining -= taken.getCount();
 		}
 		rebuildAggregatedItems();
 		return extracted;
@@ -402,28 +400,10 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 
 	public ItemStack insertIntoContainers(ItemStack stack) {
 		ItemStack remaining = stack.copy();
-		for (Container container : containers) {
-			for (int i = 0; i < container.getContainerSize() && !remaining.isEmpty(); i++) {
-				if (!container.canPlaceItem(i, remaining)) continue;
-				ItemStack slotStack = container.getItem(i);
-				if (slotStack.isEmpty()) {
-					int maxStackSize = Math.min(remaining.getMaxStackSize(), container.getMaxStackSize());
-					int place = Math.min(remaining.getCount(), maxStackSize);
-					container.setItem(i, remaining.copyWithCount(place));
-					container.setChanged();
-					remaining.shrink(place);
-				} else if (ItemStack.isSameItemSameComponents(slotStack, remaining)) {
-					int maxStackSize = Math.min(slotStack.getMaxStackSize(), container.getMaxStackSize());
-					int space = maxStackSize - slotStack.getCount();
-					if (space > 0) {
-						int place = Math.min(remaining.getCount(), space);
-						slotStack.grow(place);
-						remaining.shrink(place);
-						container.setItem(i, slotStack);
-						container.setChanged();
-					}
-				}
-			}
+		// 「先并同类堆、再找空位」的规则在 ItemAccess.insertAll，两端一致
+		for (ItemAccess access : containers) {
+			if (remaining.isEmpty()) break;
+			remaining = ItemAccess.insertAll(access, remaining);
 		}
 		rebuildAggregatedItems();
 		return remaining;
@@ -434,34 +414,34 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		containers.clear();
 		for (BlockPos pos : containerPositions) {
 			BlockEntity be = level.getBlockEntity(pos);
-			Container handler = containerAt(be);
-			if (handler != null) containers.add(handler);
+			ItemAccess access = accessAt(be);
+			if (access != null) containers.add(access);
 		}
 		rebuildAggregatedItems();
 	}
 
 	public List<BlockPos> getContainerPositions() { return containerPositions; }
-	public List<Container> getContainers() { return containers; }
+	public List<ItemAccess> getContainers() { return containers; }
 
 	/**
 	 * 求某个方块位置的物品栏视图。
 	 *
-	 * <p>先看它是不是原版 {@link Container}；不是的话再问平台要能力包装。模组容器（抽屉、储物桶、
+	 * <p>先看它是不是原版 {@link Container}；不是的话再问平台要能力适配。模组容器（抽屉、储物桶、
 	 * 各种机器的物品栏）一般只通过加载器的能力系统暴露物品栏，并不实现 {@code Container}，
 	 * 只按 {@code Container} 检索会整片漏掉。这里走能力是为了对所有模组通用，不针对任何具体模组。</p>
 	 */
-	public static Container containerAt(BlockEntity be) {
+	public static ItemAccess accessAt(BlockEntity be) {
 		if (be == null) {
 			return null;
 		}
 		if (be instanceof Container container) {
-			return container;
+			return new VanillaContainerAccess(container);
 		}
 		Level level = be.getLevel();
 		if (level == null) {
 			return null;
 		}
-		return Services.PLATFORM.getItemHandlerContainer(level, be.getBlockPos());
+		return Services.PLATFORM.findItemAccess(level, be.getBlockPos());
 	}
 	public List<TerminalSlot> getTerminalSlots() { return terminalSlots; }
 
@@ -553,7 +533,7 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 				for (int dz = -radius; dz <= radius; dz++) {
 					BlockPos pos = playerPos.offset(dx, dy, dz);
 					BlockEntity be = level.getBlockEntity(pos);
-					if (containerAt(be) == null) continue;
+					if (accessAt(be) == null) continue;
 					String blockId = BuiltInRegistries.BLOCK.getKey(be.getBlockState().getBlock()).toString();
 					if (ModConfig.blacklistBlockIds.contains(blockId)) continue;
 					positions.add(pos);

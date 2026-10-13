@@ -75,6 +75,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	/** 重开界面后要恢复到的光标位置（GUI 坐标）；NaN 表示无需恢复。 */
 	private static double restoreGuiMouseX = Double.NaN;
 	private static double restoreGuiMouseY = Double.NaN;
+	private static int restoreFrames;
 
 	private static final String[] SORT_KEYS = {"name", "count", "id", "mod"};
 
@@ -201,6 +202,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		// 挪到屏幕正中，所以先记下当前位置，等新界面第一帧再放回去。
 		restoreGuiMouseX = this.lastMouseX;
 		restoreGuiMouseY = this.lastMouseY;
+		restoreFrames = 5;
 		ModConfig.terminalRows = next;
 		ModConfig.save();
 		ClientSender.sendToServer(new OpenTerminalPacket(next));
@@ -239,12 +241,16 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 	@Override
 	public void extractBackground(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
-		// 重开界面后第一帧把光标放回切换前的位置（原版会把光标拉到屏幕正中）
+		// 切行数会重开界面，而原版开界面时 MouseHandler.releaseMouse() 会把光标挪到屏幕正中；
+		// 它的时机可能晚于新界面的第一帧，所以连续压几帧再放弃，避免和它抢。
 		if (!Double.isNaN(restoreGuiMouseX)) {
-			double scale = Minecraft.getInstance().getWindow().getGuiScale();
-			GLFW.glfwSetCursorPos(Minecraft.getInstance().getWindow().handle(),
-				restoreGuiMouseX * scale, restoreGuiMouseY * scale);
-			restoreGuiMouseX = Double.NaN;
+			if (restoreFrames-- > 0) {
+				double scale = Minecraft.getInstance().getWindow().getGuiScale();
+				GLFW.glfwSetCursorPos(Minecraft.getInstance().getWindow().handle(),
+					restoreGuiMouseX * scale, restoreGuiMouseY * scale);
+			} else {
+				restoreGuiMouseX = Double.NaN;
+			}
 		}
 		this.lastMouseX = mouseX;
 		this.lastMouseY = mouseY;
@@ -576,7 +582,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 					int cornerSize = PortableTerminalLayout.CORNER_SIZE;
 					gfx.blitSprite(RenderPipelines.GUI_TEXTURED, corner,
 						this.getX() + BTN_SIZE - cornerSize - 1,
-						this.getY() + BTN_SIZE - cornerSize,
+						this.getY() + BTN_SIZE - cornerSize - 1,
 						cornerSize, cornerSize);
 				}
 				// 悬浮提示：类型 + 当前方向，例如「数量：由多到少」

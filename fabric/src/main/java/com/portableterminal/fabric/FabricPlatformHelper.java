@@ -2,6 +2,7 @@ package com.portableterminal.fabric;
 
 import java.nio.file.Path;
 
+import com.portableterminal.inventory.ItemAccess;
 import com.portableterminal.platform.IPlatformHelper;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
@@ -11,7 +12,6 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.Container;
 import net.minecraft.world.level.Level;
 
 public class FabricPlatformHelper implements IPlatformHelper {
@@ -42,8 +42,8 @@ public class FabricPlatformHelper implements IPlatformHelper {
 	}
 
 	@Override
-	public Container getItemHandlerContainer(Level level, BlockPos pos) {
+	public ItemAccess findItemAccess(Level level, BlockPos pos) {
 		Storage<ItemVariant> storage = ItemStorage.SIDED.find(level, pos, null);
-		return storage == null ? null : new FabricItemStorageContainer(storage);
+		return storage == null ? null : new FabricStorageAccess(storage);
 	}
 }
