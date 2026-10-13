@@ -90,7 +90,8 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		Level level = playerInventory.player.level();
 		for (BlockPos pos : containerPositions) {
 			BlockEntity be = level.getBlockEntity(pos);
-			if (be instanceof Container container) containers.add(container);
+			Container handler = containerAt(be);
+			if (handler != null) containers.add(handler);
 		}
 
 		loadSortConfig();
@@ -263,8 +264,9 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 			BlockPos pos = containerPositions.get(i);
 			if (!playerPos.closerThan(pos, ModConfig.scanRadius + 1)) continue;
 			BlockEntity be = level.getBlockEntity(pos);
-			if (be instanceof Container container) {
-				if (i < containers.size()) containers.set(i, container);
+			Container handler = containerAt(be);
+			if (handler != null) {
+				if (i < containers.size()) containers.set(i, handler);
 				return true;
 			}
 		}
@@ -432,13 +434,35 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		containers.clear();
 		for (BlockPos pos : containerPositions) {
 			BlockEntity be = level.getBlockEntity(pos);
-			if (be instanceof Container container) containers.add(container);
+			Container handler = containerAt(be);
+			if (handler != null) containers.add(handler);
 		}
 		rebuildAggregatedItems();
 	}
 
 	public List<BlockPos> getContainerPositions() { return containerPositions; }
 	public List<Container> getContainers() { return containers; }
+
+	/**
+	 * 求某个方块位置的物品栏视图。
+	 *
+	 * <p>先看它是不是原版 {@link Container}；不是的话再问平台要能力包装。模组容器（抽屉、储物桶、
+	 * 各种机器的物品栏）一般只通过加载器的能力系统暴露物品栏，并不实现 {@code Container}，
+	 * 只按 {@code Container} 检索会整片漏掉。这里走能力是为了对所有模组通用，不针对任何具体模组。</p>
+	 */
+	public static Container containerAt(BlockEntity be) {
+		if (be == null) {
+			return null;
+		}
+		if (be instanceof Container container) {
+			return container;
+		}
+		Level level = be.getLevel();
+		if (level == null) {
+			return null;
+		}
+		return Services.PLATFORM.getItemHandlerContainer(level, be.getBlockPos());
+	}
 	public List<TerminalSlot> getTerminalSlots() { return terminalSlots; }
 
 	// ===== 排序方向 API（多条件并列，各自独立切换 无→↑→↓→无）=====
@@ -529,7 +553,7 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 				for (int dz = -radius; dz <= radius; dz++) {
 					BlockPos pos = playerPos.offset(dx, dy, dz);
 					BlockEntity be = level.getBlockEntity(pos);
-					if (!(be instanceof Container)) continue;
+					if (containerAt(be) == null) continue;
 					String blockId = BuiltInRegistries.BLOCK.getKey(be.getBlockState().getBlock()).toString();
 					if (ModConfig.blacklistBlockIds.contains(blockId)) continue;
 					positions.add(pos);

@@ -1,6 +1,7 @@
 plugins {
     id 'multiloader-loader'
     id 'net.fabricmc.fabric-loom'
+    id 'net.darkhax.curseforgegradle' version '1.3.33'
 }
 
 repositories {
@@ -17,6 +18,18 @@ dependencies {
 
     compileOnly('me.shedaniel.cloth:cloth-config-fabric:26.2.155') { transitive = false }
     compileOnly('com.terraformersmc:modmenu:20.0.3') { transitive = false }
+}
+
+// CurseForge 发布：gradlew :fabric:curseforge
+tasks.register('curseforge', net.darkhax.curseforgegradle.TaskPublishCurseForge) {
+    apiToken = project.findProperty('curseforge_api_key')
+    def cf = upload(project.curseforge_project_id, tasks.named('jar'))
+    cf.displayName = "${mod_name} ${version} (Fabric)"
+    cf.changelog = project.findProperty('curseforge_changelog') ?: "Release ${version}. Full change list: https://github.com/Huziyang520/Portable-Terminal"
+    cf.changelogType = 'markdown'
+    cf.releaseType = project.curseforge_release_type
+    cf.addGameVersion(*project.curseforge_game_versions.split(','))
+    cf.addModLoader('Fabric')
 }
 
 loom {
