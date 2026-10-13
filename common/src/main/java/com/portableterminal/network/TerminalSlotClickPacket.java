@@ -1,45 +1,36 @@
-// Portions of this code (terminal item click handling)
-// are based on work by tom5454 (Tom's Simple Storage Mod),
-// distributed under the MIT License. See LICENSE.toms-simple-storage for details.
 package com.portableterminal.network;
 
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import com.portableterminal.platform.TerminalPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import com.portableterminal.PortableTerminalMod;
 import com.portableterminal.menu.PortableTerminalMenu;
 import com.portableterminal.platform.Services;
 
-public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shift) implements CustomPacketPayload {
-	public static final CustomPacketPayload.Type<TerminalSlotClickPacket> TYPE =
-		new CustomPacketPayload.Type<>(Identifier.tryBuild(PortableTerminalMod.MOD_ID, "terminal_slot_click"));
+public record TerminalSlotClickPacket(ResourceLocation itemId, int button, boolean shift) implements TerminalPayload {
 
-	public static final StreamCodec<FriendlyByteBuf, TerminalSlotClickPacket> CODEC = StreamCodec.of(
-		(buf, val) -> {
-			buf.writeIdentifier(val.itemId);
-			buf.writeByte(val.button);
-			buf.writeBoolean(val.shift);
-		},
-		buf -> new TerminalSlotClickPacket(
-			buf.readIdentifier(),
-			buf.readByte(),
-			buf.readBoolean()
-		)
-	);
+	public static final ResourceLocation ID = ResourceLocation.tryBuild(PortableTerminalMod.MOD_ID, "terminal_slot_click");
+	private static final ResourceLocation DEPOSIT_MARKER = ResourceLocation.tryBuild("portableterminal", "deposit");
 
-	@Override
-	public Type<? extends CustomPacketPayload> type() {
-		return TYPE;
+public ResourceLocation id() {
+		return ID;
 	}
 
-	private static final Identifier DEPOSIT_MARKER = Identifier.tryBuild("portableterminal", "deposit");
+public void write(FriendlyByteBuf buf) {
+		buf.writeResourceLocation(itemId);
+		buf.writeByte(button);
+		buf.writeBoolean(shift);
+	}
+
+	public static TerminalSlotClickPacket read(FriendlyByteBuf buf) {
+		return new TerminalSlotClickPacket(buf.readResourceLocation(), buf.readByte(), buf.readBoolean());
+	}
 
 	public static TerminalSlotClickPacket deposit() {
 		return new TerminalSlotClickPacket(DEPOSIT_MARKER, 0, false);
@@ -67,7 +58,7 @@ public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shi
 
 		ItemStack template = null;
 		for (ItemStack stack : psm.getAggregatedItems()) {
-			Identifier stackId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+			ResourceLocation stackId = BuiltInRegistries.ITEM.getKey(stack.getItem());
 			if (stackId != null && stackId.equals(packet.itemId())) {
 				template = stack;
 				break;
@@ -108,7 +99,7 @@ public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shi
 				}
 			} else {
 				if (!carried.isEmpty()) {
-					if (ItemStack.isSameItemSameComponents(carried, extracted)) {
+					if (ItemStack.isSameItemSameTags(carried, extracted)) {
 						int space = carried.getMaxStackSize() - carried.getCount();
 						int add = Math.min(space, extracted.getCount());
 						carried.grow(add);
@@ -138,7 +129,7 @@ public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shi
 			ItemStack inSlot = inventory.getItem(i);
 			if (inSlot.isEmpty()) {
 				space += template.getMaxStackSize();
-			} else if (ItemStack.isSameItemSameComponents(inSlot, template)) {
+			} else if (ItemStack.isSameItemSameTags(inSlot, template)) {
 				space += Math.max(0, inSlot.getMaxStackSize() - inSlot.getCount());
 			}
 		}

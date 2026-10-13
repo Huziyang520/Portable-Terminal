@@ -60,7 +60,7 @@ public interface ItemAccess {
 		// 1. 并入同类堆
 		for (int i = 0; i < access.size() && !remaining.isEmpty(); i++) {
 			ItemStack slotStack = access.get(i);
-			if (slotStack.isEmpty() || !ItemStack.isSameItemSameComponents(slotStack, remaining)) continue;
+			if (slotStack.isEmpty() || !ItemStack.isSameItemSameTags(slotStack, remaining)) continue;
 			if (!access.isValid(i, remaining)) continue;
 			remaining = access.insert(i, remaining);
 		}
@@ -79,7 +79,7 @@ public interface ItemAccess {
 		int remaining = count;
 		for (int i = 0; i < access.size() && remaining > 0; i++) {
 			ItemStack slotStack = access.get(i);
-			if (slotStack.isEmpty() || !ItemStack.isSameItemSameComponents(slotStack, template)) continue;
+			if (slotStack.isEmpty() || !ItemStack.isSameItemSameTags(slotStack, template)) continue;
 			ItemStack taken = access.extract(i, Math.min(remaining, slotStack.getCount()));
 			if (taken.isEmpty()) continue;
 			if (extracted.isEmpty()) {

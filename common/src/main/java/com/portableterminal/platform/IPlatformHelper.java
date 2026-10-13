@@ -4,7 +4,7 @@ import java.nio.file.Path;
 
 import com.portableterminal.inventory.ItemAccess;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import com.portableterminal.platform.TerminalPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 

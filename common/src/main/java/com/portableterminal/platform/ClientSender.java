@@ -2,7 +2,7 @@ package com.portableterminal.platform;
 
 import java.util.function.Consumer;
 
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import com.portableterminal.platform.TerminalPayload;
 
 /**
  * Client to server delivery hook.
