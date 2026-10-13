@@ -9,6 +9,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 
@@ -85,10 +86,26 @@ public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shi
 			};
 		}
 
+		if (packet.shift()) {
+			// 原版 shift 取物在背包放不下时是「什么都不发生」，而
+			// Inventory.placeItemBackInInventory 会把装不下的部分丢到地上，
+			// 所以先算清楚背包还能装多少，只取这么多。
+			int space = freeSpaceIn(player, template);
+			if (space <= 0) {
+				return;
+			}
+			count = Math.min(count, space);
+		}
+
 		ItemStack extracted = psm.extractFromContainers(template, count);
 		if (!extracted.isEmpty()) {
 			if (packet.shift()) {
-				player.getInventory().placeItemBackInInventory(extracted);
+				ItemStack leftover = extracted.copy();
+				player.getInventory().add(leftover);
+				if (!leftover.isEmpty()) {
+					// 兜底：放回容器，绝不丢出
+					psm.insertIntoContainers(leftover);
+				}
 			} else {
 				if (!carried.isEmpty()) {
 					if (ItemStack.isSameItemSameComponents(carried, extracted)) {
@@ -111,5 +128,20 @@ public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shi
 
 		menu.broadcastChanges();
 		Services.PLATFORM.sendToPlayer(player, TerminalItemsSyncPacket.fromItemStacks(psm.getAggregatedItems()));
+	}
+
+	/** 玩家背包（36 格，不含装备与副手）还能装下多少个这种物品。 */
+	private static int freeSpaceIn(ServerPlayer player, ItemStack template) {
+		Inventory inventory = player.getInventory();
+		int space = 0;
+		for (int i = 0; i < Math.min(36, inventory.getContainerSize()); i++) {
+			ItemStack inSlot = inventory.getItem(i);
+			if (inSlot.isEmpty()) {
+				space += template.getMaxStackSize();
+			} else if (ItemStack.isSameItemSameComponents(inSlot, template)) {
+				space += Math.max(0, inSlot.getMaxStackSize() - inSlot.getCount());
+			}
+		}
+		return space;
 	}
 }

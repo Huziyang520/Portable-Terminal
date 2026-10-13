@@ -289,10 +289,8 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 			if (!extracted.isEmpty()) {
 				this.moveItemStackTo(extracted, terminalSlotCount(), terminalSlotCount() + 36, true);
 				if (!extracted.isEmpty()) {
-					ItemStack leftover = insertIntoContainers(extracted);
-					if (!leftover.isEmpty()) {
-						player.drop(leftover, false);
-					}
+					// 装不下的部分放回容器，绝不丢出：原版 shift 取物在背包满时什么都不发生
+					insertIntoContainers(extracted);
 				}
 			}
 			this.broadcastChanges();
