@@ -11,7 +11,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly('me.shedaniel.cloth:cloth-config-neoforge:26.2.155') { transitive = false }
+    compileOnly('me.shedaniel.cloth:cloth-config-neoforge:26.3.159') { transitive = false }
 }
 
 // CurseForge 发布：gradlew :neoforge:curseforge
@@ -36,7 +36,7 @@ neoForge {
     runs {
         configureEach {
             systemProperty('neoforge.enabledGameTestNamespaces', mod_id)
-            ideName = "NeoForge ${it.name.capitalize()} (${project.path})" // Unify the run config names with fabric
+            ideName = "NeoForge ${it.name.capitalize()} (${project.path})"
         }
         client {
             client()
@@ -51,25 +51,6 @@ neoForge {
     mods {
         "${mod_id}" {
             sourceSet sourceSets.main
-        }
-    }
-}
-
-// Implement mcgradleconventions loader attribute
-def loaderAttribute = Attribute.of('io.github.mcgradleconventions.loader', String)
-['apiElements', 'runtimeElements', 'sourcesElements', 'javadocElements'].each { variant ->
-    configurations.matching { it.name == variant }.configureEach {
-        attributes {
-            attribute(loaderAttribute, 'neoforge')
-        }
-    }
-}
-sourceSets.configureEach {
-    [it.compileClasspathConfigurationName, it.runtimeClasspathConfigurationName, it.getTaskName(null, 'jarJar')].each { variant ->
-        configurations.matching { it.name == variant }.configureEach {
-            attributes {
-                attribute(loaderAttribute, 'neoforge')
-            }
         }
     }
 }

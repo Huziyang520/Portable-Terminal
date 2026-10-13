@@ -11,6 +11,7 @@ import com.portableterminal.network.OpenTerminalPacket;
 import com.portableterminal.network.TerminalSlotClickPacket;
 import com.portableterminal.platform.ClientSender;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.EditBox;
@@ -26,7 +27,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -226,7 +226,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	@Override
 	public boolean keyPressed(KeyEvent event) {
 		if (this.searchBox != null && this.getFocused() == this.searchBox) {
-			if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
+			if (event.key() == InputConstants.KEY_ESCAPE) {
 				this.searchBox.setFocused(false);
 				this.setFocused(null);
 				return true;
@@ -245,8 +245,10 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		// 它的时机可能晚于新界面的第一帧，所以连续压几帧再放弃，避免和它抢。
 		if (!Double.isNaN(restoreGuiMouseX)) {
 			if (restoreFrames-- > 0) {
+				// 26.3 起窗口层由 GLFW 换成 SDL，移动窗口内光标的唯一入口是 InputConstants
+				// 的 grab/releaseMouse（内部即 SDL_WarpMouseInWindow）；界面开着时本就该是自由光标。
 				double scale = Minecraft.getInstance().getWindow().getGuiScale();
-				GLFW.glfwSetCursorPos(Minecraft.getInstance().getWindow().handle(),
+				InputConstants.releaseMouse(Minecraft.getInstance().getWindow(),
 					restoreGuiMouseX * scale, restoreGuiMouseY * scale);
 			} else {
 				restoreGuiMouseX = Double.NaN;

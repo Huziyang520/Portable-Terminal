@@ -8,7 +8,6 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import com.mojang.blaze3d.platform.InputConstants;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * The key mapping itself is loader agnostic (the vanilla constructor already publishes the
@@ -34,8 +33,8 @@ public class KeyBindHandler {
 	public static KeyMapping createMapping(KeyMapping.Category category) {
 		KeyMapping mapping = new KeyMapping(
 			MAPPING_TRANSLATION_KEY,
-			InputConstants.Type.KEYSYM,
-			GLFW.GLFW_KEY_GRAVE_ACCENT,
+			InputConstants.Type.KEYBOARD,
+			InputConstants.KEY_GRAVE,
 			category
 		);
 		openTerminal = mapping;
