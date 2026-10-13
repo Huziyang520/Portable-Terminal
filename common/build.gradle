@@ -3,11 +3,23 @@ plugins {
     id 'fabric-loom'
 }
 
+repositories {
+    // Optional integrations: never bundled, only compiled against, and guarded at runtime.
+    maven { name = 'Shedaniel'; url = 'https://maven.shedaniel.me/' }
+    maven { name = 'TerraformersMC'; url = 'https://maven.terraformersmc.com/releases/' }
+}
+
+// common 自己也要吃 access widener：MenuType 的构造器是 private，AT 只对 Forge 侧生效，
+// Loom 侧必须用 access widener 才能在本模块编译期打开它。
+loom {
+    accessWidenerPath = file("src/main/resources/${mod_id}.accesswidener")
+}
+
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
     mappings loom.officialMojangMappings()
     // Optional: config screen. Cloth Config is not a required dependency.
-    compileOnly('me.shedaniel.cloth:cloth-config-fabric:11.1.136') { transitive = false }
+    modCompileOnly('me.shedaniel.cloth:cloth-config-fabric:11.1.136') { transitive = false }
 }
 
 configurations {

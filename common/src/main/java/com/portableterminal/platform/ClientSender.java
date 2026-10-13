@@ -14,18 +14,18 @@ import com.portableterminal.platform.TerminalPayload;
  */
 public final class ClientSender {
 
-	private static Consumer<CustomPacketPayload> sender = payload -> {
+	private static Consumer<TerminalPayload> sender = payload -> {
 	};
 
 	private ClientSender() {
 	}
 
 	/** Called once by the loader's client bootstrap, before any packet can be sent. */
-	public static void install(Consumer<CustomPacketPayload> impl) {
+	public static void install(Consumer<TerminalPayload> impl) {
 		sender = impl;
 	}
 
-	public static void sendToServer(CustomPacketPayload payload) {
+	public static void sendToServer(TerminalPayload payload) {
 		sender.accept(payload);
 	}
 }

@@ -241,8 +241,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	 * 1.20.1 没有 GUI sprite 图集：blitSprite 的等价写法是带纹理尺寸的 {@code blit} 子矩形版本。
 	 * 参数顺序与原 blitSprite(贴图, 源宽, 源高, u, v, x, y, 宽, 高) 一一对应。
 	 */
-	private static void blitRegion(GuiGraphics gfx, ResourceLocation texture, int srcW, int srcH,
-			int u, int v, int x, int y, int w, int h) {
+	private static void blitRegion(GuiGraphics gfx, ResourceLocation texture, int srcW, int srcH, int u, int v, int x, int y, int w, int h) {
 		gfx.blit(texture, x, y, (float) u, (float) v, w, h, srcW, srcH);
 	}
 
@@ -270,17 +269,17 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		// 同一张贴图分三段 1:1 贴：表头 / 一行槽位（按行数重复）/ 页脚。
 		// 不能用九宫格缩放：它会按目标高度的一半钳制每条边，页脚高于面板一半时中间带
 		// 会被取成长度不对的片段，格子与物品就会错位（行数越少越明显）。
-		gfx.blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, 0, x, y, this.guiWidth, headerH);
+		blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, 0, x, y, this.guiWidth, headerH);
 		for (int row = 0; row < this.rows; row++) {
-			gfx.blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, headerH, x, y + headerH + row * SLOT_SIZE, this.guiWidth, SLOT_SIZE);
+			blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, headerH, x, y + headerH + row * SLOT_SIZE, this.guiWidth, SLOT_SIZE);
 		}
-		gfx.blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, headerH + SLOT_SIZE, x, y + headerH + this.rows * SLOT_SIZE, this.guiWidth, PortableTerminalLayout.PANEL_FOOTER_HEIGHT);
+		blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, headerH + SLOT_SIZE, x, y + headerH + this.rows * SLOT_SIZE, this.guiWidth, PortableTerminalLayout.PANEL_FOOTER_HEIGHT);
 
 		// 副手槽在面板之外：原版圆角小面板外框 + 槽位底
 		int offX = x + PortableTerminalLayout.OFFHAND_X;
 		int offY = y + PortableTerminalLayout.offhandY(this.rows);
 		drawFramePanel(gfx, offX - 5, offY - 5, SLOT_SIZE + 8, SLOT_SIZE + 8);
-		gfx.blitRegion(gfx, PortableTerminalLayout.SLOT_SPRITE, SLOT_SIZE, SLOT_SIZE, 0, 0, offX - 1, offY - 1);
+		blitRegion(gfx, PortableTerminalLayout.SLOT_SPRITE, SLOT_SIZE, SLOT_SIZE, 0, 0, offX - 1, offY - 1, SLOT_SIZE, SLOT_SIZE);
 
 		drawScrollbarThumb(gfx);
 	}
@@ -293,17 +292,17 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		int srcW = PortableTerminalLayout.PANEL_SOURCE_WIDTH;
 		int srcH = PortableTerminalLayout.PANEL_SOURCE_HEIGHT;
 		// 内部
-		gfx.blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 3, 3, x + 3, y + 3, w - 6, h - 6);
+		blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 3, 3, x + 3, y + 3, w - 6, h - 6);
 		// 四条直边
-		gfx.blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 7, 0, x + 7, y, w - 14, 3);
-		gfx.blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 7, srcH - 3, x + 7, y + h - 3, w - 14, 3);
-		gfx.blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, 7, x, y + 7, 3, h - 14);
-		gfx.blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 3, 7, x + w - 3, y + 7, 3, h - 14);
+		blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 7, 0, x + 7, y, w - 14, 3);
+		blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 7, srcH - 3, x + 7, y + h - 3, w - 14, 3);
+		blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, 7, x, y + 7, 3, h - 14);
+		blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 3, 7, x + w - 3, y + 7, 3, h - 14);
 		// 四角
-		gfx.blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, 0, x, y, 7, 7);
-		gfx.blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 7, 0, x + w - 7, y, 7, 7);
-		gfx.blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, srcH - 7, x, y + h - 7, 7, 7);
-		gfx.blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 7, srcH - 7, x + w - 7, y + h - 7, 7, 7);
+		blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, 0, x, y, 7, 7);
+		blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 7, 0, x + w - 7, y, 7, 7);
+		blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, srcH - 7, x, y + h - 7, 7, 7);
+		blitRegion(gfx, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 7, srcH - 7, x + w - 7, y + h - 7, 7, 7);
 	}
 
 	private void drawScrollbarThumb(GuiGraphics gfx) {
@@ -506,8 +505,9 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		return row * COLS + col;
 	}
 
+	// 1.20.1 的鼠标滚轮回调只有 3 个参数（scrollX 是 1.20.2 才加进来的）。
 	@Override
-	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+	public boolean mouseScrolled(double mouseX, double mouseY, double scrollY) {
 		int termX = this.leftPos + TERM_LEFT;
 		int termY = this.topPos + TERM_TOP;
 		int termW = COLS * SLOT_SIZE + SCROLLBAR_WIDTH + 4;
@@ -523,7 +523,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			}
 			return true;
 		}
-		return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+		return super.mouseScrolled(mouseX, mouseY, scrollY);
 	}
 
 	/**
@@ -557,12 +557,12 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		protected void renderWidget(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
 			if (this.sortIndex >= 0) {
 				// 底图 = 该排序类型自己的图标（名称 / 数量 / ID / 模组）
-				gfx.blitRegion(gfx, PortableTerminalLayout.sortIconSprite(this.sortIndex), BTN_SIZE, BTN_SIZE, 0, 0, this.getX(), this.getY());
+				blitRegion(gfx, PortableTerminalLayout.sortIconSprite(this.sortIndex), BTN_SIZE, BTN_SIZE, 0, 0, this.getX(), this.getY(), BTN_SIZE, BTN_SIZE);
 				// 右下角角标 = 当前状态；正序朝上、倒序朝下，未选中则不画
 				ResourceLocation corner = sortCornerArrow(this.sortIndex);
 				if (corner != null) {
 					int cornerSize = PortableTerminalLayout.CORNER_SIZE;
-					gfx.blitRegion(gfx, corner, cornerSize, cornerSize, 0, 0, this.getX() + BTN_SIZE - cornerSize - 1, this.getY() + BTN_SIZE - cornerSize - 1);
+					blitRegion(gfx, corner, cornerSize, cornerSize, 0, 0, this.getX() + BTN_SIZE - cornerSize - 1, this.getY() + BTN_SIZE - cornerSize - 1, cornerSize, cornerSize);
 				}
 				// 悬浮提示：类型 + 当前方向，例如「数量：由多到少」
 				Component tip = sortTooltip(this.sortIndex);
@@ -571,14 +571,14 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 					this.setTooltip(Tooltip.create(tip));
 				}
 				if (this.highlighted.getAsBoolean()) {
-					gfx.blitRegion(gfx, PortableTerminalLayout.HIGHLIGHT_SPRITE, BTN_SIZE, BTN_SIZE, 0, 0, this.getX(), this.getY());
+					blitRegion(gfx, PortableTerminalLayout.HIGHLIGHT_SPRITE, BTN_SIZE, BTN_SIZE, 0, 0, this.getX(), this.getY(), BTN_SIZE, BTN_SIZE);
 				}
 			} else {
 				// 行数按键：通用按钮底 + 大箭头
-				gfx.blitRegion(gfx, PortableTerminalLayout.BUTTON_SPRITE, BTN_SIZE, BTN_SIZE, 0, 0, this.getX(), this.getY());
+				blitRegion(gfx, PortableTerminalLayout.BUTTON_SPRITE, BTN_SIZE, BTN_SIZE, 0, 0, this.getX(), this.getY(), BTN_SIZE, BTN_SIZE);
 				ResourceLocation icon = this.arrow.get();
 				if (icon != null) {
-					gfx.blitRegion(gfx, icon, BTN_SIZE, BTN_SIZE, 0, 0, this.getX(), this.getY());
+					blitRegion(gfx, icon, BTN_SIZE, BTN_SIZE, 0, 0, this.getX(), this.getY(), BTN_SIZE, BTN_SIZE);
 				}
 			}
 		}

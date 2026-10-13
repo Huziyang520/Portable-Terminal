@@ -25,7 +25,7 @@ public interface IPlatformHelper {
 	boolean isDevelopmentEnvironment();
 
 	/** Server to client delivery. Safe to call from the logical server on both loaders. */
-	void sendToPlayer(ServerPlayer player, CustomPacketPayload payload);
+	void sendToPlayer(ServerPlayer player, TerminalPayload payload);
 
 	/**
 	 * 取某个方块位置上的物品栏视图。
