@@ -3,7 +3,7 @@ package com.portableterminal.network;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
 import com.portableterminal.PortableTerminalMod;
@@ -13,7 +13,7 @@ import java.util.List;
 
 public record TerminalItemsSyncPacket(List<ItemStack> items) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<TerminalItemsSyncPacket> TYPE =
-		new CustomPacketPayload.Type<>(Identifier.tryBuild(PortableTerminalMod.MOD_ID, "terminal_items_sync"));
+		new CustomPacketPayload.Type<>(ResourceLocation.tryBuild(PortableTerminalMod.MOD_ID, "terminal_items_sync"));
 
 	public static final StreamCodec<RegistryFriendlyByteBuf, TerminalItemsSyncPacket> CODEC = StreamCodec.of(
 		(buf, val) -> {

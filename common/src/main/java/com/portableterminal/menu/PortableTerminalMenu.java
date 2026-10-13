@@ -15,7 +15,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.Container;
@@ -210,9 +210,9 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 			String tagName = query.substring(1);
 			if (tagName.isEmpty()) return false;
 			try {
-				Identifier tagId = tagName.contains(":")
-					? Identifier.parse(tagName)
-					: Identifier.withDefaultNamespace(tagName);
+				ResourceLocation tagId = tagName.contains(":")
+					? new ResourceLocation(tagName)
+					: new ResourceLocation("minecraft", tagName);
 				TagKey<Item> tagKey = TagKey.create(Registries.ITEM, tagId);
 				return stack.is((java.util.function.Predicate<Holder<Item>>) holder -> holder.is(tagKey));
 			} catch (Exception e) {
@@ -220,7 +220,7 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 			}
 		}
 		// 名称搜索：装了「通用拼音搜索」时由它接管（支持全拼、首字母、简繁），否则退化为子串匹配
-		String name = stack.getItem().getName(stack).getString();
+		String name = stack.getHoverName().getString();
 		if (PinyinSearch.matches(name, query)) return true;
 		String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString().toLowerCase();
 		return id.contains(query);
@@ -360,8 +360,8 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 	private int compareBy(ItemStack a, ItemStack b, int index) {
 		switch (index) {
 			case 0: {
-				String na = a.getItem().getName(a).getString().toLowerCase();
-				String nb = b.getItem().getName(b).getString().toLowerCase();
+				String na = a.getHoverName().getString().toLowerCase();
+				String nb = b.getHoverName().getString().toLowerCase();
 				return na.compareTo(nb);
 			}
 			case 1:

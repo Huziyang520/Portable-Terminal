@@ -1,7 +1,7 @@
 package com.portableterminal.menu;
 
 import com.portableterminal.PortableTerminalMod;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * Layout constants. Everything that depends on the terminal's row count is computed from it, so the
@@ -51,7 +51,7 @@ public final class PortableTerminalLayout {
 
 	// GUI sprites (assets/portableterminal/textures/gui/sprites/).
 	private static final String SPRITE_ROOT = "terminal/";
-	public static final Identifier SLOT_SPRITE = sprite("slot");
+	public static final ResourceLocation SLOT_SPRITE = sprite("slot");
 	/**
 	 * One nine-sliced panel sprite covers every row count: its vertical center band is exactly one
 	 * slot row and repeats ({@code stretch_inner=false}), so any number of rows renders crisply
@@ -61,33 +61,33 @@ public final class PortableTerminalLayout {
 	 * （{@code Math.min(border.bottom(), height / 2)}），页脚 98px 高于面板一半时底边被截短，
 	 * 中间带就会取到长度不对的片段，格子与物品错位，且行数越少越明显。</p>
 	 */
-	public static final Identifier PANEL_SPRITE = sprite("panel");
+	public static final ResourceLocation PANEL_SPRITE = sprite("panel");
 	/** 面板源图尺寸与分段（与 panel.png 的实际像素一一对应）。 */
 	public static final int PANEL_SOURCE_WIDTH = 193;
 	public static final int PANEL_SOURCE_HEIGHT = 147;
 	public static final int PANEL_HEADER_HEIGHT = 31;
 	public static final int PANEL_FOOTER_HEIGHT = 98;
-	public static final Identifier BUTTON_SPRITE = sprite("button");
+	public static final ResourceLocation BUTTON_SPRITE = sprite("button");
 	/** 加行 / 减行按键：+/− 符号。 */
-	public static final Identifier PLUS_SPRITE = sprite("plus");
-	public static final Identifier MINUS_SPRITE = sprite("minus");
-	public static final Identifier HIGHLIGHT_SPRITE = sprite("highlight");
+	public static final ResourceLocation PLUS_SPRITE = sprite("plus");
+	public static final ResourceLocation MINUS_SPRITE = sprite("minus");
+	public static final ResourceLocation HIGHLIGHT_SPRITE = sprite("highlight");
 	/** 排序图标右下角的状态角标：正序朝上、倒序朝下。 */
-	public static final Identifier CORNER_UP_SPRITE = sprite("corner_up");
-	public static final Identifier CORNER_DOWN_SPRITE = sprite("corner_down");
+	public static final ResourceLocation CORNER_UP_SPRITE = sprite("corner_up");
+	public static final ResourceLocation CORNER_DOWN_SPRITE = sprite("corner_down");
 	public static final int CORNER_SIZE = 7;
 
 	/** 每种排序类型一个主图标；正序/倒序的区别只在右下角的角标箭头。 */
-	private static final Identifier[] SORT_ICON_SPRITES = {
+	private static final ResourceLocation[] SORT_ICON_SPRITES = {
 		sprite("sort_name"), sprite("sort_count"), sprite("sort_id"), sprite("sort_mod")
 	};
 
-	public static Identifier sortIconSprite(int index) {
+	public static ResourceLocation sortIconSprite(int index) {
 		return SORT_ICON_SPRITES[Math.floorMod(index, SORT_ICON_SPRITES.length)];
 	}
 
-	public static Identifier sprite(String path) {
-		return Identifier.tryBuild(PortableTerminalMod.MOD_ID, SPRITE_ROOT + path);
+	public static ResourceLocation sprite(String path) {
+		return ResourceLocation.tryBuild(PortableTerminalMod.MOD_ID, SPRITE_ROOT + path);
 	}
 
 	public static int clampRows(int rows) {

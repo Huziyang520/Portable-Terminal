@@ -13,11 +13,11 @@ import net.minecraft.core.registries.BuiltInRegistries;
 public class PortableTerminalFabric implements ModInitializer {
 
 	@Override
-	public void onInitialize() {
+public void onInitialize() {
 		// Payload types have to be known on both logical sides.
-		PayloadTypeRegistry.serverboundPlay().register(OpenTerminalPacket.TYPE, OpenTerminalPacket.CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(TerminalSlotClickPacket.TYPE, TerminalSlotClickPacket.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(TerminalItemsSyncPacket.TYPE, TerminalItemsSyncPacket.CODEC);
+		PayloadTypeRegistry.playC2S().register(OpenTerminalPacket.TYPE, OpenTerminalPacket.CODEC);
+		PayloadTypeRegistry.playC2S().register(TerminalSlotClickPacket.TYPE, TerminalSlotClickPacket.CODEC);
+		PayloadTypeRegistry.playS2C().register(TerminalItemsSyncPacket.TYPE, TerminalItemsSyncPacket.CODEC);
 
 		// Server side handling is shared with NeoForge, so it lives in the common packet records.
 		ServerPlayNetworking.registerGlobalReceiver(OpenTerminalPacket.TYPE,
