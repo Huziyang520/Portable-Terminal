@@ -330,7 +330,9 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 			for (ItemStack stack : slots) {
 				String key = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
 				if (stack.getTag() != null && !stack.getTag().isEmpty()) {
-					key = key + "|" + ItemStack.hashItemAndTags(stack);
+					// 本档没有 Data Components，也没有 ItemStack.hashItemAndTags：
+					// 同一物品靠「可疑 NBT 的 SNBT 串」区分（与原档 components hash 的用途一致）。
+					key = key + "|" + stack.getTag();
 				}
 				ItemStack existing = map.get(key);
 				if (existing != null) {

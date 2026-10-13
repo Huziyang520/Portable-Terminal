@@ -38,3 +38,15 @@ artifacts {
     commonJava sourceSets.main.java.sourceDirectories.singleFile
     commonResources sourceSets.main.resources.sourceDirectories.singleFile
 }
+
+// 20.x 的 net.neoforged:neoforge 会经 net.minecraftforge:unsafe:0.2.0 传递依赖 log4j 的动态版本
+// （2.11.+）。动态版本需要先取模块的版本清单，而本机对 maven.neoforged.net 不可达、拉清单会一直挂住；
+// 这里只把这条**动态版本**钉到 FancyModLoader 2.0.17 / minecraft-dependencies 本来就要求的那一档
+// （其余路径是 strict 2.19.0，缓存里已有），最终解析结果与联网一致，且不再依赖联网。
+configurations.configureEach {
+    resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'org.apache.logging.log4j' && details.requested.version.endsWith('+')) {
+            details.useVersion '2.19.0'
+        }
+    }
+}

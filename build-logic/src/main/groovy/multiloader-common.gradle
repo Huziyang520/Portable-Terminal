@@ -37,16 +37,17 @@ tasks.withType(Javadoc).configureEach {
 
 
 repositories {
+    // Cloth Config / Mod Menu 只在这两个仓库里，必须排在最前：本机对 maven.neoforged.net 不可达，
+    // 一旦先去查它（连接被代理重置 / 直连超时），modCompileOnly 的解析会把**配置阶段**直接拖死甚至失败。
+    maven { name = 'Shedaniel'; url = 'https://maven.shedaniel.me/' }
+    maven { name = 'TerraformersMC'; url = 'https://maven.terraformersmc.com/releases/' }
     // 国内镜像优先；官方源在后。
     maven { name = 'AliyunCentral'; url = 'https://maven.aliyun.com/repository/central' }
     mavenCentral()
-    // ModDevGradle 会自己注入 NeoForged 源，但本机 maven.neoforged.net 不可达；
-    // 已缓存的元数据是按某个具体仓库形状落盘的，这里把常见几种形状都列出来让缓存 id 有机会命中
-    // （离线构建时只有命中缓存描述符的那一个才起作用）。
-    maven { name = 'NeoForge'; url = 'https://maven.neoforged.net/releases' }
-    maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases' }
-    maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases/' }
-    maven { name = 'NeoForgedReleases'; url = 'https://maven.neoforged.net/releases' }
+    // 不要在这里自建 maven.neoforged.net 仓库：本机对该域名不可达（直连超时、走代理被重置），
+    // 而「自己声明一个 URL 相同的仓库」会换掉 Gradle 算出的 repository id，让**已经缓存好的**
+    // net.neoforged:* 元数据变成未命中；更糟的是解析第三方工件（cloth-config / modmenu 等）时
+    // 会按顺序先撞上这个不可达仓库，把整个配置阶段拖死。交给 ModDevGradle 自己注入 NeoForged 源。
     maven { name = 'Mojang'; url = 'https://libraries.minecraft.net/' }
     maven { name = 'Forge'; url = 'https://maven.minecraftforge.net/' }
     maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
