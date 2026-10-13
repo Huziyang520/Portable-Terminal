@@ -4,7 +4,7 @@ import com.portableterminal.menu.PortableTerminalLayout;
 import com.portableterminal.menu.PortableTerminalMenu;
 import com.portableterminal.platform.Services;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
@@ -24,7 +24,7 @@ public record OpenTerminalPacket(int rows) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<OpenTerminalPacket> TYPE =
 		new CustomPacketPayload.Type<>(Identifier.tryBuild("portableterminal", "open_terminal"));
 
-	public static final StreamCodec<FriendlyByteBuf, OpenTerminalPacket> CODEC = StreamCodec.of(
+	public static final StreamCodec<RegistryFriendlyByteBuf, OpenTerminalPacket> CODEC = StreamCodec.of(
 		(buf, packet) -> buf.writeByte(PortableTerminalLayout.clampRows(packet.rows())),
 		buf -> new OpenTerminalPacket(buf.readByte())
 	);

@@ -1,7 +1,6 @@
 plugins {
     id 'multiloader-loader'
     id 'net.neoforged.moddev'
-    id 'net.darkhax.curseforgegradle' version '1.3.33'
 }
 
 repositories {
@@ -11,20 +10,11 @@ repositories {
 }
 
 dependencies {
-    compileOnly('me.shedaniel.cloth:cloth-config-neoforge:26.2.155') { transitive = false }
+    compileOnly('me.shedaniel.cloth:cloth-config-neoforge:21.11.150') { transitive = false }
 }
 
-// CurseForge 发布：gradlew :neoforge:curseforge
-tasks.register('curseforge', net.darkhax.curseforgegradle.TaskPublishCurseForge) {
-    apiToken = project.findProperty('curseforge_api_key')
-    def cf = upload(project.curseforge_project_id, tasks.named('jar'))
-    cf.displayName = "${mod_name} ${version} (NeoForge)"
-    cf.changelog = project.findProperty('curseforge_changelog') ?: "Release ${version}. Full change list: https://github.com/Huziyang520/Portable-Terminal"
-    cf.changelogType = 'markdown'
-    cf.releaseType = project.curseforge_release_type
-    cf.addGameVersion(*project.curseforge_game_versions.split(','))
-    cf.addModLoader('NeoForge')
-}
+// 本分支的 Gradle 跑在 Java 21/17 上，而 CurseForgeGradle 1.3.33 要求 JVM 25 ⇒ 不能作为构建插件加载。
+// 发布统一走 文档/上传脚本 的 gradle init 脚本（cfUpload / mrUpload），本文件不再注册 curseforge 任务。
 
 neoForge {
     version = neoforge_version
@@ -36,7 +26,7 @@ neoForge {
     runs {
         configureEach {
             systemProperty('neoforge.enabledGameTestNamespaces', mod_id)
-            ideName = "NeoForge ${it.name.capitalize()} (${project.path})" // Unify the run config names with fabric
+            ideName = "NeoForge ${it.name.capitalize()} (${project.path})"
         }
         client {
             client()
@@ -44,32 +34,12 @@ neoForge {
         }
         server {
             server()
-            this.file('runs/server').createParentDirectories()
             gameDirectory = this.mkdir(this.file('runs/server'))
         }
     }
     mods {
         "${mod_id}" {
             sourceSet sourceSets.main
-        }
-    }
-}
-
-// Implement mcgradleconventions loader attribute
-def loaderAttribute = Attribute.of('io.github.mcgradleconventions.loader', String)
-['apiElements', 'runtimeElements', 'sourcesElements', 'javadocElements'].each { variant ->
-    configurations.matching { it.name == variant }.configureEach {
-        attributes {
-            attribute(loaderAttribute, 'neoforge')
-        }
-    }
-}
-sourceSets.configureEach {
-    [it.compileClasspathConfigurationName, it.runtimeClasspathConfigurationName, it.getTaskName(null, 'jarJar')].each { variant ->
-        configurations.matching { it.name == variant }.configureEach {
-            attributes {
-                attribute(loaderAttribute, 'neoforge')
-            }
         }
     }
 }

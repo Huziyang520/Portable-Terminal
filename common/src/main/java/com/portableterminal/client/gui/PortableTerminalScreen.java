@@ -10,7 +10,7 @@ import com.portableterminal.menu.PortableTerminalMenu;
 import com.portableterminal.network.OpenTerminalPacket;
 import com.portableterminal.network.TerminalSlotClickPacket;
 import com.portableterminal.platform.ClientSender;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.EditBox;
@@ -98,11 +98,13 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private final List<IconButton> sortButtons = new ArrayList<>();
 
 	public PortableTerminalScreen(PortableTerminalMenu menu, Inventory playerInventory, Component title) {
-		super(menu, playerInventory, title,
-			PortableTerminalLayout.IMAGE_WIDTH, PortableTerminalLayout.imageHeight(menu.getRows()));
+		super(menu, playerInventory, title);
 		this.rows = menu.getRows();
 		this.guiWidth = PortableTerminalLayout.IMAGE_WIDTH;
 		this.guiHeight = PortableTerminalLayout.imageHeight(this.rows);
+		// 1.21.x 的 AbstractContainerScreen 构造器不带尺寸，尺寸是这两个 protected 字段。
+		this.imageWidth = this.guiWidth;
+		this.imageHeight = this.guiHeight;
 		this.cachedTotalRows = this.rows;
 		this.titleLabelX = PortableTerminalLayout.PADDING;
 		this.titleLabelY = 5;
@@ -240,7 +242,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	// ==================== 背景：九宫格面板贴图 ====================
 
 	@Override
-	public void extractBackground(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
+	protected void renderBg(GuiGraphics gfx, float partialTick, int mouseX, int mouseY) {
 		// 切行数会重开界面，而原版开界面时 MouseHandler.releaseMouse() 会把光标挪到屏幕正中；
 		// 它的时机可能晚于新界面的第一帧，所以连续压几帧再放弃，避免和它抢。
 		if (!Double.isNaN(restoreGuiMouseX)) {
@@ -287,7 +289,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	 * 用面板贴图的边角，画一个带原版圆角边框的小面板（副手槽的外框）。
 	 * 全部取自同一张贴图，四角就是原版容器的 7×7 角块。
 	 */
-	private void drawFramePanel(GuiGraphicsExtractor gfx, int x, int y, int w, int h) {
+	private void drawFramePanel(GuiGraphics gfx, int x, int y, int w, int h) {
 		int srcW = PortableTerminalLayout.PANEL_SOURCE_WIDTH;
 		int srcH = PortableTerminalLayout.PANEL_SOURCE_HEIGHT;
 		// 内部
@@ -305,7 +307,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 7, srcH - 7, x + w - 7, y + h - 7, 7, 7);
 	}
 
-	private void drawScrollbarThumb(GuiGraphicsExtractor gfx) {
+	private void drawScrollbarThumb(GuiGraphics gfx) {
 		int sx = this.leftPos + SCROLLBAR_LEFT;
 		int sy = this.topPos + SCROLLBAR_TOP;
 		int trackHeight = PortableTerminalLayout.scrollbarHeight(this.rows);
@@ -332,29 +334,29 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	}
 
 	@Override
-	public void extractLabels(GuiGraphicsExtractor gfx, int mouseX, int mouseY) {
-		gfx.text(this.font, this.title, this.titleLabelX, this.titleLabelY, COL_TEXT, false);
-		gfx.text(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, COL_TEXT, false);
+	protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
+		gfx.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, COL_TEXT, false);
+		gfx.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, COL_TEXT, false);
 	}
 
 	// ==================== 终端槽位自定义渲染 ====================
 
 	@Override
-	protected void extractSlot(GuiGraphicsExtractor gfx, Slot slot, int mouseX, int mouseY) {
+	protected void renderSlot(GuiGraphics gfx, Slot slot, int mouseX, int mouseY) {
 		if (slot instanceof PortableTerminalMenu.TerminalSlot) {
 			int x = slot.x;
 			int y = slot.y;
 			ItemStack itemStack = slot.getItem();
 			if (!itemStack.isEmpty()) {
 				int seed = slot.x + slot.y * this.imageWidth;
-				gfx.item(itemStack, x, y, seed);
+				gfx.renderItem(itemStack, x, y, seed);
 				int count = itemStack.getCount();
 				if (count != 1) {
 					drawScaledCount(gfx, formatCount(count), x, y);
 				}
 			}
 		} else {
-			super.extractSlot(gfx, slot, mouseX, mouseY);
+			super.renderSlot(gfx, slot, mouseX, mouseY);
 		}
 	}
 
@@ -366,7 +368,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	}
 
 	/** 自适应缩放绘制数量数字：基础 0.7 倍，文字过宽时自动缩小以适配 16px 槽位 */
-	private void drawScaledCount(GuiGraphicsExtractor gfx, String text, int slotX, int slotY) {
+	private void drawScaledCount(GuiGraphics gfx, String text, int slotX, int slotY) {
 		float baseScale = 0.7f;
 		int maxWidth = 15;
 		float textWidth = this.font.width(text);
@@ -379,7 +381,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		float drawY = slotY + 16 - 8 * scale - 1;
 		gfx.pose().translate(drawX, drawY);
 		gfx.pose().scale(scale, scale);
-		gfx.text(this.font, text, 0, 0, 0xFFFFFFFF, true);
+		gfx.drawString(this.font, text, 0, 0, 0xFFFFFFFF, true);
 		gfx.pose().popMatrix();
 	}
 
@@ -570,7 +572,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		}
 
 		@Override
-		protected void extractContents(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
+		protected void renderContents(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
 			if (this.sortIndex >= 0) {
 				// 底图 = 该排序类型自己的图标（名称 / 数量 / ID / 模组）
 				gfx.blitSprite(RenderPipelines.GUI_TEXTURED,

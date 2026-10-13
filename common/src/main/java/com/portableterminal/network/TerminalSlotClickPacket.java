@@ -4,7 +4,7 @@
 package com.portableterminal.network;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
@@ -21,7 +21,7 @@ public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shi
 	public static final CustomPacketPayload.Type<TerminalSlotClickPacket> TYPE =
 		new CustomPacketPayload.Type<>(Identifier.tryBuild(PortableTerminalMod.MOD_ID, "terminal_slot_click"));
 
-	public static final StreamCodec<FriendlyByteBuf, TerminalSlotClickPacket> CODEC = StreamCodec.of(
+	public static final StreamCodec<RegistryFriendlyByteBuf, TerminalSlotClickPacket> CODEC = StreamCodec.of(
 		(buf, val) -> {
 			buf.writeIdentifier(val.itemId);
 			buf.writeByte(val.button);

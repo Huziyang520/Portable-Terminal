@@ -53,8 +53,9 @@ public class PortableTerminalClient {
 		}
 
 		if (ServerTagChecker.isModDisabled()) {
-			minecraft.player.sendSystemMessage(
-				net.minecraft.network.chat.Component.translatable("msg.portableterminal.server_disabled")
+			// 客户端侧 Player#sendSystemMessage 在 1.21.9 起只存在于服务端，客户端要用 displayClientMessage。
+			minecraft.player.displayClientMessage(
+				net.minecraft.network.chat.Component.translatable("msg.portableterminal.server_disabled"), false
 			);
 			return;
 		}

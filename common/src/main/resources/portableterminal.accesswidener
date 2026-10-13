@@ -1,7 +1,8 @@
-accessWidener	v2	official
+accessWidener	v2	named
 
 # Keep in sync with common/src/main/resources/META-INF/accesstransformer.cfg
-# (descriptors verified with javap against the 26.2 client jar).
+# 本区间仍是有混淆的版本，Loom 的 named 命名空间就是这里的官方映射名，所以 AW 头必须写 named。
+# (descriptors verified with javap against the 1.21.11 client jar).
 
 # vanilla 26.2 made the MenuType constructor private and MenuType$MenuSupplier
 # package-private; mods must widen both to register their own menu type.
