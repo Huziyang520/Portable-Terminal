@@ -238,19 +238,20 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 
 	/**
-	 * 外部 UI（JEI）需要避让的区域，屏幕坐标系：面板本身，外加面板之外的副手槽小面板。
+	 * 外部 UI（JEI）需要避让的区域，屏幕坐标系：面板本身，以及面板左侧那一列（排序/行数按钮 + 副手槽）。
 	 */
 	public List<Rect2i> getExclusionAreas() {
 		List<Rect2i> areas = new ArrayList<>();
 		areas.add(new Rect2i(this.leftPos, this.topPos, this.guiWidth, this.guiHeight));
-		int offX = this.leftPos + PortableTerminalLayout.OFFHAND_X - 5;
-		int offY = this.topPos + PortableTerminalLayout.offhandY(this.rows) - 5;
-		int offSize = SLOT_SIZE + 8;
-		if (offX < this.leftPos || offY < this.topPos
-			|| offX + offSize > this.leftPos + this.guiWidth
-			|| offY + offSize > this.topPos + this.guiHeight) {
-			areas.add(new Rect2i(offX, offY, offSize, offSize));
-		}
+		int colLeft = this.leftPos + PortableTerminalLayout.SORT_BTN_X;
+		int colTop = this.topPos + PortableTerminalLayout.TERM_TOP;
+		int colRight = this.leftPos + Math.max(
+			PortableTerminalLayout.SORT_BTN_X + PortableTerminalLayout.BTN_SIZE,
+			PortableTerminalLayout.OFFHAND_X + SLOT_SIZE);
+		int colBottom = this.topPos + Math.max(
+			PortableTerminalLayout.ROWS_DOWN_BTN_Y + PortableTerminalLayout.BTN_SIZE,
+			PortableTerminalLayout.offhandY(this.rows) + SLOT_SIZE);
+		areas.add(new Rect2i(colLeft, colTop, colRight - colLeft, colBottom - colTop));
 		return areas;
 	}
 
@@ -371,16 +372,14 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	/**
 	 * 画出终端槽位的数量文字。
 	 *
-	 * <p>为什么挪到槽位循环之后：GUI 绘制全程关闭深度测试，遮挡只由「谁先画」决定，而同一帧里
-	 * 渲染类型是**按批处理 flush** 的（物品一批、文字一批）。物品与它自己的数量若在同一槽位里
-	 * 先后提交，物品那一批仍会后刷、把数量盖住 —— 这也是逐槽位插 flush 治不好的原因。等所有
-	 * 物品都提交完再画数量，并在画之前 flush() 一次把物品批先钉在屏幕上，顺序才真正固定
-	 * （SKILL §10.34）。</p>
+	 * <p>关键不在提交时机，而在 z：物品（3D 模型）是带深度测试绘制的，绘制时会把深度写进缓冲，
+	 * 它的位置等价于 pose 的 z=150；数量文字必须画在更靠前的 z 才能盖住物品。原版
+	 * {@code renderItemDecorations} 就是在画数量前 {@code pose.translate(0, 0, 200)}（1.21.5
+	 * 字节码核实），本项目照做。本档 flush() 只做 endBatch()、不碰深度状态，所以它只是把物品批
+	 * 先钉上屏幕，真正决定遮挡的是 z=200。</p>
 	 */
 	private void drawTerminalCounts(GuiGraphics gfx) {
 		gfx.flush();
-		// 本档的 GuiGraphics.flush() 只做 endBatch()、不碰深度状态（1.21.2 起渲染状态并入管线，
-		// RenderSystem 也没有深度 API），所以这里只需要「先 flush 再画」把物品批钉死。
 		for (Slot slot : this.menu.slots) {
 			if (!(slot instanceof PortableTerminalMenu.TerminalSlot)) {
 				continue;
@@ -427,7 +426,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		gfx.pose().pushPose();
 		float drawX = slotX + 16 - textWidth * scale - 1;
 		float drawY = slotY + 16 - 8 * scale - 1;
-		gfx.pose().translate(drawX, drawY, 0.0F);
+		gfx.pose().translate(drawX, drawY, 200.0F);
 		gfx.pose().scale(scale, scale, 1.0F);
 		gfx.drawString(this.font, text, 0, 0, 0xFFFFFFFF, true);
 		gfx.pose().popPose();
