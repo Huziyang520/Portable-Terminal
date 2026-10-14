@@ -57,6 +57,9 @@ jar {
 }
 
 processResources {
+    // Forge（FG6）模块默认按**平台编码**写过滤后的文件：本机是 GBK，而游戏按 UTF-8 读 mods.toml
+    // ⇒ 描述里的中文变乱码（Fabric 侧由 Loom 自己设成 UTF-8，所以只有 Forge 端中招）。
+    filteringCharset = 'UTF-8'
     // 容忍缺项：区间不同时并不存在 neoforge_* / forge_* 两组属性。
     var expandKeys = [
             'version', 'group', 'minecraft_version', 'minecraft_version_range', 'fabric_minecraft_range',

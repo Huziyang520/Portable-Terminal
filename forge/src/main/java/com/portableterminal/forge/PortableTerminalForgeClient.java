@@ -34,7 +34,9 @@ public class PortableTerminalForgeClient {
 			MenuScreens.register(ModMenuTypes.get(), PortableTerminalScreen::new);
 
 			// Optional: the config button only exists when Cloth Config is installed.
-			if (Services.PLATFORM.isModLoaded("cloth-config")) {
+			// Cloth Config 在 Forge 端的 modId 是 cloth_config（下划线），Fabric 端才是 cloth-config。
+			if (Services.PLATFORM.isModLoaded("cloth-config")
+				|| Services.PLATFORM.isModLoaded("cloth_config")) {
 				ModLoadingContext.get().registerExtensionPoint(
 					ConfigScreenHandler.ConfigScreenFactory.class,
 					() -> new ConfigScreenHandler.ConfigScreenFactory(

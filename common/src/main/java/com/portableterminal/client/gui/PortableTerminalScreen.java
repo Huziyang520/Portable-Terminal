@@ -281,6 +281,10 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		drawFramePanel(gfx, offX - 5, offY - 5, SLOT_SIZE + 8, SLOT_SIZE + 8);
 		blitRegion(gfx, PortableTerminalLayout.SLOT_SPRITE, SLOT_SIZE, SLOT_SIZE, 0, 0, offX - 1, offY - 1, SLOT_SIZE, SLOT_SIZE);
 
+		// GUI 绘制全程关闭深度测试，遮挡只由「谁先画」决定；同批次里渲染类型的提交顺序
+		// 又不等于绘制顺序（按批处理 flush）。面板画完先 flush()，把背景这一批钉在屏幕上，
+		// 免得后面的槽位 / 文字批次抢到前面去（SKILL §10.34）。
+		gfx.flush();
 		drawScrollbarThumb(gfx);
 	}
 
