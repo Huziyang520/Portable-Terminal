@@ -278,6 +278,10 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		gfx.blitSprite(RenderType::guiTextured, PortableTerminalLayout.SLOT_SPRITE,
 			offX - 1, offY - 1, SLOT_SIZE, SLOT_SIZE);
 
+		// GUI 绘制全程关闭深度测试，遮挡只由「谁先画」决定；同批次里渲染类型的提交顺序
+		// 又不等于绘制顺序（按批处理 flush）。面板画完先 flush()，把背景这一批钉在屏幕上，
+		// 免得后面的槽位 / 文字批次抢到前面去（SKILL §10.34）。
+		gfx.flush();
 		drawScrollbarThumb(gfx);
 	}
 
@@ -346,6 +350,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			if (!itemStack.isEmpty()) {
 				int seed = slot.x + slot.y * this.imageWidth;
 				gfx.renderItem(itemStack, x, y, seed);
+				// 同上：物品这一批先落屏，再画数量文字，否则数量会被物品盖住（SKILL §10.34）。
+				gfx.flush();
 				int count = itemStack.getCount();
 				if (count != 1) {
 					drawScaledCount(gfx, formatCount(count), x, y);
