@@ -12,6 +12,7 @@ import com.portableterminal.network.TerminalSlotClickPacket;
 import com.portableterminal.platform.ClientSender;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
@@ -232,6 +233,24 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			return true;
 		}
 		return super.keyPressed(keyCode, scanCode, modifiers);
+	}
+
+
+	/**
+	 * 外部 UI（JEI）需要避让的区域，屏幕坐标系：面板本身，外加面板之外的副手槽小面板。
+	 */
+	public List<Rect2i> getExclusionAreas() {
+		List<Rect2i> areas = new ArrayList<>();
+		areas.add(new Rect2i(this.leftPos, this.topPos, this.guiWidth, this.guiHeight));
+		int offX = this.leftPos + PortableTerminalLayout.OFFHAND_X - 5;
+		int offY = this.topPos + PortableTerminalLayout.offhandY(this.rows) - 5;
+		int offSize = SLOT_SIZE + 8;
+		if (offX < this.leftPos || offY < this.topPos
+			|| offX + offSize > this.leftPos + this.guiWidth
+			|| offY + offSize > this.topPos + this.guiHeight) {
+			areas.add(new Rect2i(offX, offY, offSize, offSize));
+		}
+		return areas;
 	}
 
 	// ==================== 背景：三段 1:1 分片的面板贴图 ====================

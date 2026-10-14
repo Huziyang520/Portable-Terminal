@@ -20,6 +20,10 @@ dependencies {
     mappings loom.officialMojangMappings()
     // Optional: config screen. Cloth Config is not a required dependency.
     modCompileOnly('me.shedaniel.cloth:cloth-config-fabric:11.1.136') { transitive = false }
+	// Optional: JEI avoidance. JEI is not a required dependency and is never bundled.
+	// Optional: JEI avoidance. The API jar is vendored under common/libs and is only
+	// compiled against (never bundled, never required at runtime).
+	compileOnly files('libs/jei-1.20.1-common-api-15.62.0.219.jar')
 }
 
 configurations {
