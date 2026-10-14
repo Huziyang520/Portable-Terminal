@@ -6,7 +6,7 @@ version="${version}"
 displayName="${mod_name}"
 authors="${mod_author}"
 logoFile="icon.png"
-displayURL="https://github.com/Huziyang520/Portable-Terminal"
+displayURL="https://www.curseforge.com/minecraft/mc-mods/portable-terminal"
 issueTrackerURL="https://github.com/Huziyang520/Portable-Terminal/issues"
 description='''${description}'''
 
