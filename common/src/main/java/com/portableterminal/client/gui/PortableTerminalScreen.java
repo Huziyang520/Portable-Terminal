@@ -244,19 +244,20 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 
 	/**
-	 * 外部 UI（JEI）需要避让的区域，屏幕坐标系：面板本身，外加面板之外的副手槽小面板。
+	 * 外部 UI（JEI）需要避让的区域，屏幕坐标系：面板本身，以及面板左侧那一列（排序/行数按钮 + 副手槽）。
 	 */
 	public List<Rect2i> getExclusionAreas() {
 		List<Rect2i> areas = new ArrayList<>();
 		areas.add(new Rect2i(this.leftPos, this.topPos, this.guiWidth, this.guiHeight));
-		int offX = this.leftPos + PortableTerminalLayout.OFFHAND_X - 5;
-		int offY = this.topPos + PortableTerminalLayout.offhandY(this.rows) - 5;
-		int offSize = SLOT_SIZE + 8;
-		if (offX < this.leftPos || offY < this.topPos
-			|| offX + offSize > this.leftPos + this.guiWidth
-			|| offY + offSize > this.topPos + this.guiHeight) {
-			areas.add(new Rect2i(offX, offY, offSize, offSize));
-		}
+		int colLeft = this.leftPos + PortableTerminalLayout.SORT_BTN_X;
+		int colTop = this.topPos + PortableTerminalLayout.TERM_TOP;
+		int colRight = this.leftPos + Math.max(
+			PortableTerminalLayout.SORT_BTN_X + PortableTerminalLayout.BTN_SIZE,
+			PortableTerminalLayout.OFFHAND_X + SLOT_SIZE);
+		int colBottom = this.topPos + Math.max(
+			PortableTerminalLayout.ROWS_DOWN_BTN_Y + PortableTerminalLayout.BTN_SIZE,
+			PortableTerminalLayout.offhandY(this.rows) + SLOT_SIZE);
+		areas.add(new Rect2i(colLeft, colTop, colRight - colLeft, colBottom - colTop));
 		return areas;
 	}
 
