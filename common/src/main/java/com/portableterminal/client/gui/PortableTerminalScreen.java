@@ -21,6 +21,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -238,6 +239,23 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	}
 
 	// ==================== 背景：九宫格面板贴图 ====================
+
+	/**
+	 * 外部 UI（JEI）需要避让的区域，屏幕坐标系：面板本身，外加面板之外的副手槽小面板。
+	 */
+	public List<Rect2i> getExclusionAreas() {
+		List<Rect2i> areas = new ArrayList<>();
+		areas.add(new Rect2i(this.leftPos, this.topPos, this.guiWidth, this.guiHeight));
+		int offX = this.leftPos + PortableTerminalLayout.OFFHAND_X - 5;
+		int offY = this.topPos + PortableTerminalLayout.offhandY(this.rows) - 5;
+		int offSize = SLOT_SIZE + 8;
+		if (offX < this.leftPos || offY < this.topPos
+			|| offX + offSize > this.leftPos + this.guiWidth
+			|| offY + offSize > this.topPos + this.guiHeight) {
+			areas.add(new Rect2i(offX, offY, offSize, offSize));
+		}
+		return areas;
+	}
 
 	@Override
 	public void extractBackground(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {

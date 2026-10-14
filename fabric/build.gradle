@@ -18,6 +18,8 @@ dependencies {
 
     compileOnly('me.shedaniel.cloth:cloth-config-fabric:26.3.159') { transitive = false }
     compileOnly('com.terraformersmc:modmenu:21.0.0') { transitive = false }
+    // JEI（可选前置）：只编译期引用仓库内自带的 API 工件；不打包、不设必装依赖。
+    compileOnly files('../common/libs/jei-26.3-common-api-31.12.0.65.jar')
 }
 
 // CurseForge 发布：gradlew :fabric:curseforge

@@ -20,6 +20,10 @@ repositories {
 dependencies {
     // Optional: config screen. Cloth Config is not a required dependency.
     compileOnly('me.shedaniel.cloth:cloth-config-fabric:26.3.159') { transitive = false }
+	// Optional: JEI avoidance. JEI is not a required dependency and is never bundled.
+	// Optional: JEI avoidance. The API jar is vendored under common/libs and is only
+	// compiled against (never bundled, never required at runtime).
+	compileOnly files('libs/jei-26.3-common-api-31.12.0.65.jar')
 }
 
 configurations {
