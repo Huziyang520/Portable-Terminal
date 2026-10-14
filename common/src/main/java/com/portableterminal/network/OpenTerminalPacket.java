@@ -45,6 +45,14 @@ public record OpenTerminalPacket(int rows) implements CustomPacketPayload {
 		}
 
 		PortableTerminalMenu.setPendingPositions(player, containers);
+		// 切行数时（当前已经是终端菜单）不要走 openMenu 里的 closeContainer：那会多发一个
+		// ClientboundContainerClosePacket，客户端会先 setScreen(null) 再 setScreen(新界面)，
+		// 中间那一帧原版压暗层与面板不一致，表现为切行数时背景「呼吸」闪烁。
+		// doCloseContainer() 与 closeContainer() 做的事完全一样，只是不发那个关闭包；
+		// openMenu 见当前已是 inventoryMenu 就不会再关一次，客户端直接由打开包换到新界面。
+		if (player.containerMenu instanceof PortableTerminalMenu) {
+			player.doCloseContainer();
+		}
 		player.openMenu(new PortableTerminalMenuProvider(containers, clampedRows));
 
 		if (player.containerMenu instanceof PortableTerminalMenu psm) {
