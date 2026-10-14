@@ -17,7 +17,11 @@ public class PortableTerminalModMenu implements ModMenuApi {
 
 	@Override
 	public ConfigScreenFactory<?> getModConfigScreenFactory() {
-		return parent -> clothConfigLoaded() ? ModConfigScreen.create(parent) : null;
+		// Cloth Config 未安装时返回 null：Mod Menu 按「工厂是否非 null」决定是否显示配置按钮。
+		if (!clothConfigLoaded()) {
+			return null;
+		}
+		return ModConfigScreen::create;
 	}
 
 	private static boolean clothConfigLoaded() {
