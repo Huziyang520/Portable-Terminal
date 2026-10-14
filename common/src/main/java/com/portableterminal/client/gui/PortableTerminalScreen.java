@@ -12,6 +12,7 @@ import com.portableterminal.network.TerminalSlotClickPacket;
 import com.portableterminal.platform.ClientSender;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
@@ -235,6 +236,24 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		return super.keyPressed(keyCode, scanCode, modifiers);
 	}
 
+
+	/**
+	 * 外部 UI（JEI）需要避让的区域，屏幕坐标系：面板本身，外加面板之外的副手槽小面板。
+	 */
+	public List<Rect2i> getExclusionAreas() {
+		List<Rect2i> areas = new ArrayList<>();
+		areas.add(new Rect2i(this.leftPos, this.topPos, this.guiWidth, this.guiHeight));
+		int offX = this.leftPos + PortableTerminalLayout.OFFHAND_X - 5;
+		int offY = this.topPos + PortableTerminalLayout.offhandY(this.rows) - 5;
+		int offSize = SLOT_SIZE + 8;
+		if (offX < this.leftPos || offY < this.topPos
+			|| offX + offSize > this.leftPos + this.guiWidth
+			|| offY + offSize > this.topPos + this.guiHeight) {
+			areas.add(new Rect2i(offX, offY, offSize, offSize));
+		}
+		return areas;
+	}
+
 	// ==================== 背景：三段 1:1 分片的面板贴图 ====================
 
 	@Override
@@ -257,6 +276,14 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		int headerH = PortableTerminalLayout.PANEL_HEADER_HEIGHT;
 		int x = this.leftPos;
 		int y = this.topPos;
+
+		// 画面板之前，先把这一帧原版已经提交的批次落屏：原版开界面会先画一层压暗/模糊背景
+		// （1.20.2+ 的 renderTransparentBackground，见 AbstractContainerScreen.renderBackground
+		// 先调 Screen.renderBackground 再调 renderBg），那层是 fill 批次、我们的面板是贴图批次，
+		// 帧末哪一批先刷并不保证；切行数会改变面板的分片数量（行数变了），批次构成随之变化，
+		// 于是整块背景「呼吸」闪烁（1.20.1 没有那层压暗，1.21.9+ 的 stratum 管线按提交顺序画，
+		// 所以这两档不闪）。这里插一次 flush 把压暗批钉死在面板之前。
+		gfx.flush();
 
 		// 同一张贴图分三段 1:1 贴：表头 / 一行槽位（按行数重复）/ 页脚。
 		// 不能用九宫格缩放：它会按目标高度的一半钳制每条边，页脚高于面板一半时中间带
@@ -352,6 +379,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	 */
 	private void drawTerminalCounts(GuiGraphics gfx) {
 		gfx.flush();
+		// 本档的 GuiGraphics.flush() 只做 endBatch()、不碰深度状态（1.21.2 起渲染状态并入管线，
+		// RenderSystem 也没有深度 API），所以这里只需要「先 flush 再画」把物品批钉死。
 		for (Slot slot : this.menu.slots) {
 			if (!(slot instanceof PortableTerminalMenu.TerminalSlot)) {
 				continue;

@@ -22,6 +22,10 @@ dependencies {
     // common 由 ModDevGradle 以官方映射编译，fabric 工件是 intermediary 的，只能引 neoforge 工件。
     // common 由 ModDevGradle 以官方映射编译，fabric 工件是 intermediary 的，只能引 neoforge 工件。
     compileOnly('me.shedaniel.cloth:cloth-config-neoforge:18.0.145') { transitive = false }
+	// Optional: JEI avoidance. JEI is not a required dependency and is never bundled.
+	// Optional: JEI avoidance. The API jar is vendored under common/libs and is only
+	// compiled against (never bundled, never required at runtime).
+	compileOnly files('libs/jei-1.21.5-common-api-21.4.0.27.jar')
 }
 
 configurations {
