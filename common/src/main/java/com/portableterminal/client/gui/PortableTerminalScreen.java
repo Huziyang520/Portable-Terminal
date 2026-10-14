@@ -3,6 +3,7 @@
 // distributed under the MIT License. See LICENSE.toms-simple-storage for details.
 package com.portableterminal.client.gui;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.portableterminal.PortableTerminalClient;
 import com.portableterminal.config.ModConfig;
 import com.portableterminal.menu.PortableTerminalLayout;
@@ -12,6 +13,7 @@ import com.portableterminal.network.TerminalSlotClickPacket;
 import com.portableterminal.platform.ClientSender;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
@@ -234,6 +236,24 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		return super.keyPressed(keyCode, scanCode, modifiers);
 	}
 
+
+	/**
+	 * 外部 UI（JEI）需要避让的区域，屏幕坐标系：面板本身，外加面板之外的副手槽小面板。
+	 */
+	public List<Rect2i> getExclusionAreas() {
+		List<Rect2i> areas = new ArrayList<>();
+		areas.add(new Rect2i(this.leftPos, this.topPos, this.guiWidth, this.guiHeight));
+		int offX = this.leftPos + PortableTerminalLayout.OFFHAND_X - 5;
+		int offY = this.topPos + PortableTerminalLayout.offhandY(this.rows) - 5;
+		int offSize = SLOT_SIZE + 8;
+		if (offX < this.leftPos || offY < this.topPos
+			|| offX + offSize > this.leftPos + this.guiWidth
+			|| offY + offSize > this.topPos + this.guiHeight) {
+			areas.add(new Rect2i(offX, offY, offSize, offSize));
+		}
+		return areas;
+	}
+
 	// ==================== 背景：三段 1:1 分片的面板贴图 ====================
 
 	@Override
@@ -256,6 +276,14 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		int headerH = PortableTerminalLayout.PANEL_HEADER_HEIGHT;
 		int x = this.leftPos;
 		int y = this.topPos;
+
+		// 画面板之前，先把这一帧原版已经提交的批次落屏：原版开界面会先画一层压暗/模糊背景
+		// （1.20.2+ 的 renderTransparentBackground，见 AbstractContainerScreen.renderBackground
+		// 先调 Screen.renderBackground 再调 renderBg），那层是 fill 批次、我们的面板是贴图批次，
+		// 帧末哪一批先刷并不保证；切行数会改变面板的分片数量（行数变了），批次构成随之变化，
+		// 于是整块背景「呼吸」闪烁（1.20.1 没有那层压暗，1.21.9+ 的 stratum 管线按提交顺序画，
+		// 所以这两档不闪）。这里插一次 flush 把压暗批钉死在面板之前。
+		gfx.flush();
 
 		// 同一张贴图分三段 1:1 贴：表头 / 一行槽位（按行数重复）/ 页脚。
 		// 不能用九宫格缩放：它会按目标高度的一半钳制每条边，页脚高于面板一半时中间带
@@ -351,15 +379,23 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	 */
 	private void drawTerminalCounts(GuiGraphics gfx) {
 		gfx.flush();
-		for (Slot slot : this.menu.slots) {
-			if (!(slot instanceof PortableTerminalMenu.TerminalSlot)) {
-				continue;
+		// flush() 收尾时会重新打开深度测试；而物品（3D 模型）那一批在绘制时会写深度，
+		// 数量文字若带着深度测试画，就会被物品压在后面 —— 只从物品的透明像素里露出来，
+		// 看起来就是「数字渲染在物品后面」。数量是覆盖层，必须关着深度测试画，画完还原。
+		RenderSystem.disableDepthTest();
+		try {
+			for (Slot slot : this.menu.slots) {
+				if (!(slot instanceof PortableTerminalMenu.TerminalSlot)) {
+					continue;
+				}
+				ItemStack stack = slot.getItem();
+				if (stack.isEmpty() || stack.getCount() == 1) {
+					continue;
+				}
+				drawScaledCount(gfx, formatCount(stack.getCount()), slot.x, slot.y);
 			}
-			ItemStack stack = slot.getItem();
-			if (stack.isEmpty() || stack.getCount() == 1) {
-				continue;
-			}
-			drawScaledCount(gfx, formatCount(stack.getCount()), slot.x, slot.y);
+		} finally {
+			RenderSystem.enableDepthTest();
 		}
 	}
 
