@@ -3,7 +3,6 @@
 // distributed under the MIT License. See LICENSE.toms-simple-storage for details.
 package com.portableterminal.client.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.portableterminal.PortableTerminalClient;
 import com.portableterminal.config.ModConfig;
 import com.portableterminal.menu.PortableTerminalLayout;
@@ -238,19 +237,20 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 
 	/**
-	 * 外部 UI（JEI）需要避让的区域，屏幕坐标系：面板本身，外加面板之外的副手槽小面板。
+	 * 外部 UI（JEI）需要避让的区域，屏幕坐标系：面板本身，以及面板左侧那一列（排序/行数按钮 + 副手槽）。
 	 */
 	public List<Rect2i> getExclusionAreas() {
 		List<Rect2i> areas = new ArrayList<>();
 		areas.add(new Rect2i(this.leftPos, this.topPos, this.guiWidth, this.guiHeight));
-		int offX = this.leftPos + PortableTerminalLayout.OFFHAND_X - 5;
-		int offY = this.topPos + PortableTerminalLayout.offhandY(this.rows) - 5;
-		int offSize = SLOT_SIZE + 8;
-		if (offX < this.leftPos || offY < this.topPos
-			|| offX + offSize > this.leftPos + this.guiWidth
-			|| offY + offSize > this.topPos + this.guiHeight) {
-			areas.add(new Rect2i(offX, offY, offSize, offSize));
-		}
+		int colLeft = this.leftPos + PortableTerminalLayout.SORT_BTN_X;
+		int colTop = this.topPos + PortableTerminalLayout.TERM_TOP;
+		int colRight = this.leftPos + Math.max(
+			PortableTerminalLayout.SORT_BTN_X + PortableTerminalLayout.BTN_SIZE,
+			PortableTerminalLayout.OFFHAND_X + SLOT_SIZE);
+		int colBottom = this.topPos + Math.max(
+			PortableTerminalLayout.ROWS_DOWN_BTN_Y + PortableTerminalLayout.BTN_SIZE,
+			PortableTerminalLayout.offhandY(this.rows) + SLOT_SIZE);
+		areas.add(new Rect2i(colLeft, colTop, colRight - colLeft, colBottom - colTop));
 		return areas;
 	}
 
@@ -371,31 +371,22 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	/**
 	 * 画出终端槽位的数量文字。
 	 *
-	 * <p>为什么挪到槽位循环之后：GUI 绘制全程关闭深度测试，遮挡只由「谁先画」决定，而同一帧里
-	 * 渲染类型是**按批处理 flush** 的（物品一批、文字一批）。物品与它自己的数量若在同一槽位里
-	 * 先后提交，物品那一批仍会后刷、把数量盖住 —— 这也是逐槽位插 flush 治不好的原因。等所有
-	 * 物品都提交完再画数量，并在画之前 flush() 一次把物品批先钉在屏幕上，顺序才真正固定
-	 * （SKILL §10.34）。</p>
+	 * <p>关键不在提交时机，而在 z：物品（3D 模型）是带深度测试绘制的，绘制时会把深度写进缓冲，
+	 * 它的位置等价于 pose 的 z=150；数量文字必须画在更靠前的 z 才能盖住物品。原版
+	 * {@code renderItemDecorations} 就是在画数量前 {@code pose.translate(0, 0, 200)}（1.20.4 /
+	 * 1.21.1 字节码核实），本项目照做。逐槽位画、槽位循环之后画都可以，z 才是决定因素。</p>
 	 */
 	private void drawTerminalCounts(GuiGraphics gfx) {
 		gfx.flush();
-		// flush() 收尾时会重新打开深度测试；而物品（3D 模型）那一批在绘制时会写深度，
-		// 数量文字若带着深度测试画，就会被物品压在后面 —— 只从物品的透明像素里露出来，
-		// 看起来就是「数字渲染在物品后面」。数量是覆盖层，必须关着深度测试画，画完还原。
-		RenderSystem.disableDepthTest();
-		try {
-			for (Slot slot : this.menu.slots) {
-				if (!(slot instanceof PortableTerminalMenu.TerminalSlot)) {
-					continue;
-				}
-				ItemStack stack = slot.getItem();
-				if (stack.isEmpty() || stack.getCount() == 1) {
-					continue;
-				}
-				drawScaledCount(gfx, formatCount(stack.getCount()), slot.x, slot.y);
+		for (Slot slot : this.menu.slots) {
+			if (!(slot instanceof PortableTerminalMenu.TerminalSlot)) {
+				continue;
 			}
-		} finally {
-			RenderSystem.enableDepthTest();
+			ItemStack stack = slot.getItem();
+			if (stack.isEmpty() || stack.getCount() == 1) {
+				continue;
+			}
+			drawScaledCount(gfx, formatCount(stack.getCount()), slot.x, slot.y);
 		}
 	}
 
@@ -433,7 +424,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		gfx.pose().pushPose();
 		float drawX = slotX + 16 - textWidth * scale - 1;
 		float drawY = slotY + 16 - 8 * scale - 1;
-		gfx.pose().translate(drawX, drawY, 0.0F);
+		gfx.pose().translate(drawX, drawY, 200.0F);
 		gfx.pose().scale(scale, scale, 1.0F);
 		gfx.drawString(this.font, text, 0, 0, 0xFFFFFFFF, true);
 		gfx.pose().popPose();
