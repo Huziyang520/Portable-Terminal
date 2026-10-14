@@ -334,8 +334,33 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 	@Override
 	protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
+		// 槽位循环已经结束（原版把 renderLabels 放在槽位循环之后调用），此时才能安全地画数量。
+		drawTerminalCounts(gfx);
 		gfx.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, COL_TEXT, false);
 		gfx.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, COL_TEXT, false);
+	}
+
+	/**
+	 * 画出终端槽位的数量文字。
+	 *
+	 * <p>为什么挪到槽位循环之后：GUI 绘制全程关闭深度测试，遮挡只由「谁先画」决定，而同一帧里
+	 * 渲染类型是**按批处理 flush** 的（物品一批、文字一批）。物品与它自己的数量若在同一槽位里
+	 * 先后提交，物品那一批仍会后刷、把数量盖住 —— 这也是逐槽位插 flush 治不好的原因。等所有
+	 * 物品都提交完再画数量，并在画之前 flush() 一次把物品批先钉在屏幕上，顺序才真正固定
+	 * （SKILL §10.34）。</p>
+	 */
+	private void drawTerminalCounts(GuiGraphics gfx) {
+		gfx.flush();
+		for (Slot slot : this.menu.slots) {
+			if (!(slot instanceof PortableTerminalMenu.TerminalSlot)) {
+				continue;
+			}
+			ItemStack stack = slot.getItem();
+			if (stack.isEmpty() || stack.getCount() == 1) {
+				continue;
+			}
+			drawScaledCount(gfx, formatCount(stack.getCount()), slot.x, slot.y);
+		}
 	}
 
 	// ==================== 终端槽位自定义渲染 ====================
@@ -343,18 +368,10 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	@Override
 	protected void renderSlot(GuiGraphics gfx, Slot slot) {
 		if (slot instanceof PortableTerminalMenu.TerminalSlot) {
-			int x = slot.x;
-			int y = slot.y;
 			ItemStack itemStack = slot.getItem();
 			if (!itemStack.isEmpty()) {
 				int seed = slot.x + slot.y * this.imageWidth;
-				gfx.renderItem(itemStack, x, y, seed);
-				// 同上：物品这一批先落屏，再画数量文字，否则数量会被物品盖住（SKILL §10.34）。
-				gfx.flush();
-				int count = itemStack.getCount();
-				if (count != 1) {
-					drawScaledCount(gfx, formatCount(count), x, y);
-				}
+				gfx.renderItem(itemStack, slot.x, slot.y, seed);
 			}
 		} else {
 			super.renderSlot(gfx, slot);
