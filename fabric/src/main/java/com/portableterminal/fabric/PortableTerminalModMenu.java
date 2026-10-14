@@ -4,6 +4,8 @@ import com.portableterminal.config.ModConfigScreen;
 import com.portableterminal.platform.Services;
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
+import com.terraformersmc.modmenu.util.NullScreenFactory;
+import net.minecraft.client.gui.screens.Screen;
 
 /**
  * Fabric side config button, provided through Mod Menu.
@@ -17,7 +19,12 @@ public class PortableTerminalModMenu implements ModMenuApi {
 
 	@Override
 	public ConfigScreenFactory<?> getModConfigScreenFactory() {
-		return parent -> clothConfigLoaded() ? ModConfigScreen.create(parent) : null;
+		// Cloth Config 未安装时返回 Mod Menu 的哨兵工厂：它按「工厂是否非 null」决定是否显示
+		// 配置按钮，返回 NullScreenFactory 即可隐藏按钮，又不会触发它对 null 值的写入异常。
+		if (!clothConfigLoaded()) {
+			return new NullScreenFactory<Screen>();
+		}
+		return ModConfigScreen::create;
 	}
 
 	private static boolean clothConfigLoaded() {

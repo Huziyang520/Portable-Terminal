@@ -12,6 +12,8 @@ repositories {
 
 dependencies {
     compileOnly('me.shedaniel.cloth:cloth-config-neoforge:26.2.155') { transitive = false }
+    // JEI 是可选前置：只编译期引用，API 工件随仓库放在 common/libs，不打包、不设必装依赖。
+    compileOnly files('../common/libs/jei-26.2-common-api-30.42.0.236.jar')
 }
 
 // CurseForge 发布：gradlew :neoforge:curseforge

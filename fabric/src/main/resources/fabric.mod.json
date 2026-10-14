@@ -8,6 +8,11 @@
     "${mod_author}"
   ],
   "license": "${license}",
+  "contact": {
+    "homepage": "https://www.curseforge.com/minecraft/mc-mods/portable-terminal",
+    "issues": "https://github.com/Huziyang520/Portable-Terminal/issues",
+    "sources": "https://github.com/Huziyang520/Portable-Terminal"
+  },
   "icon": "icon.png",
   "environment": "*",
   "accessWidener": "${mod_id}.accesswidener",
@@ -20,6 +25,9 @@
     ],
     "modmenu": [
       "com.portableterminal.fabric.PortableTerminalModMenu"
+    ],
+    "jei_mod_plugin": [
+      "com.portableterminal.compat.PortableTerminalJeiPlugin"
     ]
   },
   "depends": {
