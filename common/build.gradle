@@ -22,6 +22,10 @@ dependencies {
     // Fabric 工件是 intermediary 名，MDG 侧的 common（official 名）读不了它；官方映射的 NeoForge 工件才
     // 能在 common 里编译 ModConfigScreen。fabric 模块另用 modCompileOnly 引 fabric 工件。
     compileOnly('me.shedaniel.cloth:cloth-config-neoforge:21.11.150') { transitive = false }
+	// Optional: JEI avoidance. JEI is not a required dependency and is never bundled.
+	// Optional: JEI avoidance. The API jar is vendored under common/libs and is only
+	// compiled against (never bundled, never required at runtime).
+	compileOnly files('libs/jei-1.21.11-common-api-27.48.0.106.jar')
 }
 
 configurations {

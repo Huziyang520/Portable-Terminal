@@ -22,7 +22,7 @@ build
 # other
 run
 runs
-libs
+/libs
 .vscode
 
 # java crash dumps
