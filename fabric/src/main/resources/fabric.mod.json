@@ -20,6 +20,9 @@
     ],
     "modmenu": [
       "com.portableterminal.fabric.PortableTerminalModMenu"
+    ],
+    "jei_mod_plugin": [
+      "com.portableterminal.compat.PortableTerminalJeiPlugin"
     ]
   },
   "depends": {
