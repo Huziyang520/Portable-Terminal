@@ -260,6 +260,10 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 	@Override
 	public void extractBackground(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
+		// 压暗/模糊的菜单背景层由 Screen.extractBackground 画；26.x 起容器面板由子类自绘，但必须
+		// 先调 super 才会有那层背景（否则世界直接透出来）。原生 ContainerScreen 就是「先 super、
+		// 再 blit 面板」这个顺序。
+		super.extractBackground(gfx, mouseX, mouseY, partialTick);
 		// 切行数会重开界面，而原版开界面时 MouseHandler.releaseMouse() 会把光标挪到屏幕正中；
 		// 它的时机可能晚于新界面的第一帧，所以连续压几帧再放弃，避免和它抢。
 		if (!Double.isNaN(restoreGuiMouseX)) {
@@ -411,7 +415,11 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		double mouseX = event.x();
 		double mouseY = event.y();
 		int button = event.button();
-		boolean hasShift = event.hasShiftDown();
+		// 26.3 起输入层由 GLFW 换成 SDL：鼠标事件里的修饰键在个别情况下取不到，再兜一层 SDL
+		// 键盘实时状态，保证「按住 shift 拖动快速转移」稳定触发（与旧版 Screen.hasShiftDown 等价）。
+		boolean hasShift = event.hasShiftDown()
+			|| InputConstants.isKeyDown(InputConstants.KEY_LSHIFT)
+			|| InputConstants.isKeyDown(InputConstants.KEY_RSHIFT);
 
 		if (isInSearchBox(mouseX, mouseY)) {
 			this.setFocused(this.searchBox);

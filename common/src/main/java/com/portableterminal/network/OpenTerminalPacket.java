@@ -45,6 +45,13 @@ public record OpenTerminalPacket(int rows) implements CustomPacketPayload {
 		}
 
 		PortableTerminalMenu.setPendingPositions(player, containers);
+		// 切行数会重开终端：不走 openMenu 里的 closeContainer（它多发一个关闭包，客户端会先
+		// setScreen(null)，可能触发重新抓取鼠标并把光标挪到屏幕正中）。doCloseContainer() 与
+		// closeContainer() 做的事一样但不发包；openMenu 见当前已是 inventoryMenu 就不再关闭，
+		// 客户端直接由打开包换到新界面，光标留在原处。
+		if (player.containerMenu instanceof PortableTerminalMenu) {
+			player.doCloseContainer();
+		}
 		player.openMenu(new PortableTerminalMenuProvider(containers, clampedRows));
 
 		if (player.containerMenu instanceof PortableTerminalMenu psm) {
