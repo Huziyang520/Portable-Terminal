@@ -356,17 +356,57 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	}
 
 	@Override
+	public void render(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
+		// 1.20.1 的 AbstractContainerScreen.render 只调 renderBg，不调 renderBackground
+		// （1.20.2 起才由原版自己画那层压暗背景），所以这里手动补上，与 1.20.2+ 的观感一致。
+		this.renderBackground(gfx);
+		// 渲染期间让终端槽位交出「数量 1」的副本，原版就不画数量数字，改由 renderLabels 自绘
+		// （1.20.1 的原版数量绘制不会缩小大数量；renderSlot 是 private，无法覆盖）。
+		PortableTerminalMenu.hideVanillaCounts = true;
+		try {
+			super.render(gfx, mouseX, mouseY, partialTick);
+		} finally {
+			PortableTerminalMenu.hideVanillaCounts = false;
+		}
+	}
+
+	@Override
+	protected void renderTooltip(GuiGraphics gfx, int mouseX, int mouseY) {
+		// 提示框要显示真实数量：临时关掉「数量 1」的显示替换
+		boolean previous = PortableTerminalMenu.hideVanillaCounts;
+		PortableTerminalMenu.hideVanillaCounts = false;
+		try {
+			super.renderTooltip(gfx, mouseX, mouseY);
+		} finally {
+			PortableTerminalMenu.hideVanillaCounts = previous;
+		}
+	}
+
+	@Override
 	protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
 		gfx.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, COL_TEXT, false);
 		gfx.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, COL_TEXT, false);
+		drawTerminalCounts(gfx);
 	}
 
-	// ==================== 终端槽位自定义渲染 ====================
+	// ==================== 终端槽位数量自绘 ====================
 
-	// 本区间不能自定义槽位渲染：1.20.1 的 AbstractContainerScreen#renderSlot 是 private，
-	// 子类同名方法不会被调用，因此这里不做覆盖，终端槽位按原版方式绘制（数量不做 K/M 缩写）。
-	// 其余区间该覆盖仍然生效，行为差异到此为止。
+	// 1.20.1 的 AbstractContainerScreen#renderSlot 是 private，子类同名方法不会被调用，
+	// 所以原版数量画不了也换不了；改为：渲染期间让 TerminalSlot 交出「数量 1」的副本（原版就不画数字），
+	// 再由这里按 1.20.2+ 的同一套规则自绘（0.7 基准、最宽 15px、超宽自动缩小）。
 
+	private void drawTerminalCounts(GuiGraphics gfx) {
+		for (Slot slot : this.menu.slots) {
+			if (!(slot instanceof PortableTerminalMenu.TerminalSlot terminalSlot)) {
+				continue;
+			}
+			ItemStack stack = terminalSlot.getRealItem();
+			if (stack.isEmpty() || stack.getCount() == 1) {
+				continue;
+			}
+			drawScaledCount(gfx, formatCount(stack.getCount()), slot.x, slot.y);
+		}
+	}
 
 	/** 大数量格式化：万级以上用 K/M 缩写，避免数字过长溢出槽位 */
 	private String formatCount(int count) {
@@ -387,7 +427,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		gfx.pose().pushPose();
 		float drawX = slotX + 16 - textWidth * scale - 1;
 		float drawY = slotY + 16 - 8 * scale - 1;
-		gfx.pose().translate(drawX, drawY, 0.0F);
+		// z=200 与原版 renderItemDecorations 里画数量的高度一致，保证数字压在物品之上
+		gfx.pose().translate(drawX, drawY, 200.0F);
 		gfx.pose().scale(scale, scale, 1.0F);
 		gfx.drawString(this.font, text, 0, 0, 0xFFFFFFFF, true);
 		gfx.pose().popPose();

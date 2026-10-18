@@ -37,6 +37,16 @@ import java.util.UUID;
 
 public class PortableTerminalMenu extends AbstractContainerMenu {
 
+	/**
+	 * 渲染期间为 true：终端槽位返回「数量 1」的副本，让原版不画数量数字。
+	 * 1.20.1 的原版 {@code GuiGraphics#renderItemDecorations} 不缩小大数量（1.20.2+ 才有），
+	 * 而 {@code AbstractContainerScreen#renderSlot} 是 private、无法覆盖，所以只能从槽位取值这一侧
+	 * 把原版数字让出来，真正的数字由界面层按比例自绘。
+	 *
+	 * <p>放在菜单类而不是界面类：菜单服务端也会加载，不能引用客户端专用类。</p>
+	 */
+	public static boolean hideVanillaCounts = false;
+
 	// 槽位坐标为 16x16 物品区左上角（遵循原版 +1 约定）。
 	// 所有随行数变化的值一律走 PortableTerminalLayout，保证「菜单槽位 / 界面尺寸 / 贴图」三者永远一致。
 	public static final int PADDING = PortableTerminalLayout.PADDING;
@@ -606,6 +616,10 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 	}
 
 	public static class TerminalSlot extends Slot {
+
+		/** 「数量 1」副本的来源快照；槽位内容不变时复用副本，避免每帧复制 NBT。 */
+		private ItemStack countHiddenSource = ItemStack.EMPTY;
+		private ItemStack countHiddenCopy = ItemStack.EMPTY;
 		public TerminalSlot(Container container, int index, int x, int y) {
 			super(container, index, x, y);
 		}
@@ -618,6 +632,31 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		@Override
 		public boolean mayPickup(Player player) {
 			return false;
+		}
+
+		/**
+		 * 屏幕渲染期间返回「数量 1」的副本：1.20.1 的原版数量绘制不会缩小大数量，
+		 * 而槽位渲染方法在 AbstractContainerScreen 里是 private、无法覆盖，
+		 * 所以从取值这一侧让原版跳过数量，真正的数字由界面层自绘。
+		 * 非渲染期间（点击、提示框等）一律返回真实堆叠。
+		 */
+		@Override
+		public ItemStack getItem() {
+			ItemStack stack = super.getItem();
+			if (!hideVanillaCounts || stack.isEmpty() || stack.getCount() <= 1) {
+				return stack;
+			}
+			if (!ItemStack.matches(this.countHiddenSource, stack)) {
+				this.countHiddenCopy = stack.copy();
+				this.countHiddenCopy.setCount(1);
+				this.countHiddenSource = stack.copy();
+			}
+			return this.countHiddenCopy;
+		}
+
+		/** 真实堆叠（给屏幕自绘数量用，绕过 {@link #getItem()} 的显示替换）。 */
+		public ItemStack getRealItem() {
+			return super.getItem();
 		}
 	}
 }
