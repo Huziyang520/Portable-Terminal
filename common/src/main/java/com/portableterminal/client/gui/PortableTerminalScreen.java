@@ -88,6 +88,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private boolean draggingScrollbar = false;
 	/** Shift + left button drag over the terminal slots: quick move every slot entered. */
 	private boolean draggingQuickMove = false;
+	private boolean draggingQuickMoveShift = false;
 	private int lastQuickMoveSlot = -1;
 
 	// 滚动条状态缓存：仅在用户主动滚动时更新，数据同步不触发重算，彻底避免闪烁
@@ -444,47 +445,46 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		}
 
 		int hoveredSlot = getHoveredTerminalSlot((int) mouseX, (int) mouseY);
-		if (hoveredSlot >= 0 && button == 0 && hasShift) {
-			// shift + 左键：进入拖拽快速转移模式（每滑过一格转移一组）
+		if (hoveredSlot >= 0 && button == 0) {
+			// 按住左键拖过多个槽位 = 连续触发，与 MouseTweaks 的拖拽行为一致。
+			// 26.3 的 MouseTweaks 2.31 只剩 AbstractContainerScreenAccessor 一个 mixin、没有输入钩子
+			// （26.2 那版还有 MixinMouseHandler），所以在终端界面上只能自己实现这一层，
+			// 否则面板内拖拽无法批量转移。
 			draggingQuickMove = true;
-			lastQuickMoveSlot = -1;
-			quickMoveHoveredSlot((int) mouseX, (int) mouseY);
-			return true;
-		}
-
-		if (hoveredSlot >= 0) {
-			ItemStack carried = this.menu.getCarried();
-			if (button != 2 && !carried.isEmpty()) {
-				ClientSender.sendToServer(TerminalSlotClickPacket.deposit());
-				return true;
-			}
-
-			ItemStack shown = this.menu.getTerminalSlots().get(hoveredSlot).getItem();
-			if (shown.isEmpty()) {
-				return true;
-			}
-
-			Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(shown.getItem());
-			ClientSender.sendToServer(new TerminalSlotClickPacket(itemId, button, hasShift));
+			draggingQuickMoveShift = hasShift;
+			lastQuickMoveSlot = hoveredSlot;
+			clickTerminalSlot(hoveredSlot, button, hasShift);
 			return true;
 		}
 
 		return super.mouseClicked(event, inside);
 	}
 
-	/** 触发一次「受击槽位 → 玩家背包」的整组转移；同一格只触发一次。 */
+	/** 对某个终端槽位执行一次点击动作（与单点完全相同；拖拽经过其它槽位时重复调用）。 */
+	private void clickTerminalSlot(int slotIndex, int button, boolean hasShift) {
+		ItemStack carried = this.menu.getCarried();
+		if (button != 2 && !carried.isEmpty()) {
+			ClientSender.sendToServer(TerminalSlotClickPacket.deposit());
+			return;
+		}
+
+		ItemStack shown = this.menu.getTerminalSlots().get(slotIndex).getItem();
+		if (shown.isEmpty()) {
+			return;
+		}
+
+		Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(shown.getItem());
+		ClientSender.sendToServer(new TerminalSlotClickPacket(itemId, button, hasShift));
+	}
+
+	/** 拖拽经过的新槽位触发一次点击动作；同一格只触发一次。 */
 	private void quickMoveHoveredSlot(int mouseX, int mouseY) {
 		int slotIndex = getHoveredTerminalSlot(mouseX, mouseY);
 		if (slotIndex < 0 || slotIndex == lastQuickMoveSlot) {
 			return;
 		}
 		lastQuickMoveSlot = slotIndex;
-		ItemStack shown = this.menu.getTerminalSlots().get(slotIndex).getItem();
-		if (shown.isEmpty()) {
-			return;
-		}
-		Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(shown.getItem());
-		ClientSender.sendToServer(new TerminalSlotClickPacket(itemId, 0, true));
+		clickTerminalSlot(slotIndex, 0, draggingQuickMoveShift);
 	}
 
 	@Override
@@ -508,6 +508,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		}
 		if (draggingQuickMove) {
 			draggingQuickMove = false;
+			draggingQuickMoveShift = false;
 			lastQuickMoveSlot = -1;
 			return true;
 		}
