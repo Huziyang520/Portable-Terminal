@@ -360,6 +360,9 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		// 1.20.1 的 AbstractContainerScreen.render 只调 renderBg，不调 renderBackground
 		// （1.20.2 起才由原版自己画那层压暗背景），所以这里手动补上，与 1.20.2+ 的观感一致。
 		this.renderBackground(gfx);
+		// 压暗层是一整屏的 fill 批次，面板是贴图批次；不先落屏的话两者在帧末的刷新顺序不保证，
+		// 切行数重开界面时就会出现「呼吸」闪烁（1.20.2+ 由原版自己画这层，我们这档必须手动 flush）。
+		gfx.flush();
 		// 渲染期间让终端槽位交出「数量 1」的副本，原版就不画数量数字，改由 renderLabels 自绘
 		// （1.20.1 的原版数量绘制不会缩小大数量；renderSlot 是 private，无法覆盖）。
 		PortableTerminalMenu.hideVanillaCounts = true;
@@ -396,6 +399,10 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	// 再由这里按 1.20.2+ 的同一套规则自绘（0.7 基准、最宽 15px、超宽自动缩小）。
 
 	private void drawTerminalCounts(GuiGraphics gfx) {
+		// 槽位里的物品是贴图批次、文字是另一个批次，两者帧末刷新顺序不保证（物品批次可能后刷，
+		// 会把缩小的数字整个盖住——原版数字没被盖住只是因为它更大、会露出图标边缘）。先 flush 让
+		// 物品落屏，数字才真正压在物品之上。
+		gfx.flush();
 		for (Slot slot : this.menu.slots) {
 			if (!(slot instanceof PortableTerminalMenu.TerminalSlot terminalSlot)) {
 				continue;
