@@ -86,9 +86,12 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private int lastMouseY;
 	private Component lastTooltip;
 	private boolean draggingScrollbar = false;
-	/** Shift + left button drag over the terminal slots: quick move every slot entered. */
+	/** 左键按下时落到的终端槽位（-1 = 未按下 / 没有落在槽位上）。 */
+	private int pressSlot = -1;
+	/** 按下时是否按住 shift；拖拽经过新槽位时沿用这个取值，保持与首格动作一致。 */
+	private boolean pressShift = false;
+	/** 指针真的滑到另一格之后才升级成拖拽：单击路径完全不受影响。 */
 	private boolean draggingQuickMove = false;
-	private boolean draggingQuickMoveShift = false;
 	private int lastQuickMoveSlot = -1;
 
 	// 滚动条状态缓存：仅在用户主动滚动时更新，数据同步不触发重算，彻底避免闪烁
@@ -446,12 +449,12 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 		int hoveredSlot = getHoveredTerminalSlot((int) mouseX, (int) mouseY);
 		if (hoveredSlot >= 0 && button == 0) {
-			// 按住左键拖过多个槽位 = 连续触发，与 MouseTweaks 的拖拽行为一致。
-			// 26.3 的 MouseTweaks 2.31 只剩 AbstractContainerScreenAccessor 一个 mixin、没有输入钩子
-			// （26.2 那版还有 MixinMouseHandler），所以在终端界面上只能自己实现这一层，
-			// 否则面板内拖拽无法批量转移。
-			draggingQuickMove = true;
-			draggingQuickMoveShift = hasShift;
+			// 单击路径必须保持原样：一次点击只发一次 TerminalSlotClickPacket。
+			// 拖拽只是「按下之后再滑到别的格子」时附加的行为（见 mouseDragged），
+			// 所以这里绝不能提前把 draggingQuickMove 置真，否则释放事件和单点语义都会被改掉。
+			pressSlot = hoveredSlot;
+			pressShift = hasShift;
+			draggingQuickMove = false;
 			lastQuickMoveSlot = hoveredSlot;
 			clickTerminalSlot(hoveredSlot, button, hasShift);
 			return true;
@@ -484,7 +487,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			return;
 		}
 		lastQuickMoveSlot = slotIndex;
-		clickTerminalSlot(slotIndex, 0, draggingQuickMoveShift);
+		clickTerminalSlot(slotIndex, 0, pressShift);
 	}
 
 	@Override
@@ -493,7 +496,15 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			scrollToMouse(event.y());
 			return true;
 		}
-		if (draggingQuickMove) {
+		// 拖拽只在「已按下某格 + 指针进入另一格」时升级，单击因此保持原有的单发语义。
+		if (pressSlot >= 0 && !draggingQuickMove) {
+			int slotIndex = getHoveredTerminalSlot((int) event.x(), (int) event.y());
+			if (slotIndex >= 0 && slotIndex != pressSlot) {
+				draggingQuickMove = true;
+				quickMoveHoveredSlot((int) event.x(), (int) event.y());
+				return true;
+			}
+		} else if (draggingQuickMove) {
 			quickMoveHoveredSlot((int) event.x(), (int) event.y());
 			return true;
 		}
@@ -506,12 +517,10 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			draggingScrollbar = false;
 			return true;
 		}
-		if (draggingQuickMove) {
-			draggingQuickMove = false;
-			draggingQuickMoveShift = false;
-			lastQuickMoveSlot = -1;
-			return true;
-		}
+		// 释放语义一律交回原版：这里只是清掉自己记的按压状态，绝不吞事件。
+		pressSlot = -1;
+		draggingQuickMove = false;
+		lastQuickMoveSlot = -1;
 		return super.mouseReleased(event);
 	}
 
