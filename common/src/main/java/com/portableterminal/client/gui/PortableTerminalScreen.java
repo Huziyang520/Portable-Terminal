@@ -434,8 +434,14 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		gfx.pose().pushPose();
 		float drawX = slotX + 16 - textWidth * scale - 1;
 		float drawY = slotY + 16 - 8 * scale - 1;
-		// z=200 与原版 renderItemDecorations 里画数量的高度一致，保证数字压在物品之上
-		gfx.pose().translate(drawX, drawY, 200.0F);
+		// 深度必须给足，否则数字会被物品挡住。1.20.1 的真实层级（javap -c 核定）：
+		//   AbstractContainerScreen#renderSlot 先 pose.translate(0, 0, 100)，
+		//   物品是 GuiGraphics.renderItem 的 +150 ⇒ 绝对 z = 250，
+		//   原版数量是 renderItemDecorations 的 +200 ⇒ 绝对 z = 300。
+		// 而 renderLabels 的基准 z 是 0（不在 renderSlot 那个 +100 里），所以这里必须写 300，
+		// 写 200 就等于「比物品更远」⇒ 被物品的深度整块盖住（1.20.2+ 的 200 之所以够，是因为
+		// 那一档 renderSlot 没有 +100 的基准）。
+		gfx.pose().translate(drawX, drawY, 300.0F);
 		gfx.pose().scale(scale, scale, 1.0F);
 		gfx.drawString(this.font, text, 0, 0, 0xFFFFFFFF, true);
 		gfx.pose().popPose();
