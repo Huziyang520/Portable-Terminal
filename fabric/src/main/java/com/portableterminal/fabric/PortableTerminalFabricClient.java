@@ -18,6 +18,7 @@ public class PortableTerminalFabricClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		PortableTerminalClient.initClient();
+		FabricConfig.install();
 
 		ClientSender.install(ClientPlayNetworking::send);
 

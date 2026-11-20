@@ -1,6 +1,7 @@
 package com.portableterminal.neoforge;
 
 import com.portableterminal.PortableTerminalMod;
+import com.portableterminal.config.spec.PortableTerminalSpec;
 import com.portableterminal.menu.ModMenuTypes;
 import com.portableterminal.menu.PortableTerminalMenu;
 import com.portableterminal.network.OpenTerminalPacket;
@@ -9,7 +10,10 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.neoforged.neoforge.registries.RegisterEvent;
@@ -21,7 +25,12 @@ import net.neoforged.neoforge.registries.RegisterEvent;
 @Mod(PortableTerminalMod.MOD_ID)
 public class PortableTerminalNeoForge {
 
-	public PortableTerminalNeoForge(IEventBus modBus) {
+	public PortableTerminalNeoForge(IEventBus modBus, ModContainer container) {
+		// 设置项交给 NeoForge 自己的配置系统：模组列表的「配置」按钮与界面都由它提供。
+		container.registerConfig(ModConfig.Type.CLIENT, PortableTerminalSpec.SPEC, "portableterminal-client.toml");
+		modBus.addListener((ModConfigEvent.Loading event) -> PortableTerminalSpec.applyAll());
+		modBus.addListener((ModConfigEvent.Reloading event) -> PortableTerminalSpec.applyAll());
+
 		modBus.addListener(this::registerPayloads);
 		// NeoForge keeps the vanilla registries frozen until RegisterEvent fires, so the menu type
 		// must not be registered from the mod constructor.

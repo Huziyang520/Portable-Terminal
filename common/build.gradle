@@ -22,13 +22,9 @@ if (backend == 'loom') {
 }
 
 dependencies {
-    // 可选：配置界面。Cloth Config 不是必需依赖。
     if (backend == 'loom') {
         minecraft "com.mojang:minecraft:${minecraft_version}"
         mappings loom.officialMojangMappings()
-        modCompileOnly("${cloth_config_common}") { transitive = false }
-    } else {
-        compileOnly("${cloth_config_common}") { transitive = false }
     }
     // 可选：JEI 避让。只编译期引用仓库内自带的 API 工件，不打包、不设必装依赖。
     compileOnly files("libs/${jei_api_jar}")

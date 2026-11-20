@@ -26,7 +26,7 @@ public class PortableTerminalClient {
 
 	/** Called by each loader's client bootstrap, after the loader is ready. */
 	public static void initClient() {
-		ModConfig.load();
+		ModConfig.loadState();
 		LOGGER.info("Portable Terminal client initialised");
 	}
 

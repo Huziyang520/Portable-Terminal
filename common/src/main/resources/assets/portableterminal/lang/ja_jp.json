@@ -32,5 +32,6 @@
   "gui.portableterminal.sort.id.desc": "ID：降順",
   "gui.portableterminal.sort.mod.asc": "MOD：昇順",
   "gui.portableterminal.sort.mod.desc": "MOD：降順",
-  "gui.portableterminal.sort.none": "未ソート（クリックで有効）"
+  "gui.portableterminal.sort.none": "未ソート（クリックで有効）",
+  "portableterminal.configuration.general": "一般"
 }

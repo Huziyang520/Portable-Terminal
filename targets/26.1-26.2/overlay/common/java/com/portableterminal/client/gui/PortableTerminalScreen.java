@@ -204,8 +204,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		restoreGuiMouseX = this.lastMouseX;
 		restoreGuiMouseY = this.lastMouseY;
 		restoreFrames = 5;
-		ModConfig.terminalRows = next;
-		ModConfig.save();
+		ModConfig.setRows(next);
 		ClientSender.sendToServer(new OpenTerminalPacket(next));
 	}
 
@@ -260,10 +259,13 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 	@Override
 	public void extractBackground(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
-		// 压暗/模糊的菜单背景层由 Screen.extractBackground 画；26.x 起容器面板由子类自绘，但必须
-		// 先调 super 才会有那层背景（否则世界直接透出来）。原生 ContainerScreen 就是「先 super、
-		// 再 blit 面板」这个顺序。
-		super.extractBackground(gfx, mouseX, mouseY, partialTick);
+		// 遮罩层自己做，不依赖 super：切行数会重建界面，super 那条链在重建的中间帧上会漏掉压暗，
+		// 表现为遮罩闪一下。这里按原版同一组颜色直绘，并按「菜单背景模糊」设置补上模糊。
+		if (Minecraft.getInstance().options.getMenuBackgroundBlurriness() > 0) {
+			gfx.blurBeforeThisStratum();
+		}
+		gfx.fillGradient(0, 0, this.width, this.height, 0xC0101010, 0xD0101010);
+		Minecraft.getInstance().gui.hud.extractDeferredSubtitles();
 		// 切行数会重开界面，而原版开界面时 MouseHandler.releaseMouse() 会把光标挪到屏幕正中；
 		// 它的时机可能晚于新界面的第一帧，所以连续压几帧再放弃，避免和它抢。
 		if (!Double.isNaN(restoreGuiMouseX)) {
