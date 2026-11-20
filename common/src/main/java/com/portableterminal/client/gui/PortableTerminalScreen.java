@@ -200,6 +200,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			return;
 		}
 		this.rows = next;
+		this.scrollbarDirty = true;
 		ModConfig.setRows(next);
 		this.menu.applyViewRows(next);
 		this.guiHeight = this.imageHeight;
@@ -209,6 +210,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 	private void onItemsSynced(List<ItemStack> items) {
 		this.menu.setAggregatedItemsFromServer(items);
+		// 物品数变了，滑块长度/位置都得跟着重算，否则会一直显示开界面那一帧的旧比例。
+		this.scrollbarDirty = true;
 	}
 
 	private void onSearchChanged(String value) {
@@ -337,7 +340,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		}
 
 		int inner = trackHeight - 2;
-		int thumbH = Math.max(SCROLL_THUMB_MIN, inner * this.rows / Math.max(1, cachedTotalRows));
+		int thumbH = Math.min(inner, Math.max(SCROLL_THUMB_MIN, inner * this.rows / Math.max(1, cachedTotalRows)));
 		int thumbY = sy + 1;
 		if (cachedMaxScroll > 0) {
 			thumbY = sy + 1 + (inner - thumbH) * cachedScrollOffset / cachedMaxScroll;
@@ -521,8 +524,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		if (maxScroll <= 0) return;
 		int trackHeight = PortableTerminalLayout.scrollbarHeight(this.rows);
 		int inner = trackHeight - 2;
-		int thumbH = Math.max(SCROLL_THUMB_MIN,
-			inner * this.rows / Math.max(1, Math.max(this.menu.getTotalRows(), this.rows)));
+		int thumbH = Math.min(inner, Math.max(SCROLL_THUMB_MIN,
+			inner * this.rows / Math.max(1, Math.max(this.menu.getTotalRows(), this.rows))));
 		int trackTop = this.topPos + SCROLLBAR_TOP + 1 + thumbH / 2;
 		double ratio = (mouseY - trackTop) / (double) (inner - thumbH);
 		this.menu.setScrollOffset((int) Math.round(ratio * maxScroll));
