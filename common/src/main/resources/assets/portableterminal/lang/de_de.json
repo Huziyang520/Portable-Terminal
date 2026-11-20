@@ -32,5 +32,6 @@
   "gui.portableterminal.sort.id.desc": "ID: absteigend",
   "gui.portableterminal.sort.mod.asc": "Mod: aufsteigend",
   "gui.portableterminal.sort.mod.desc": "Mod: absteigend",
-  "gui.portableterminal.sort.none": "Nicht sortiert (klicken zum Aktivieren)"
+  "gui.portableterminal.sort.none": "Nicht sortiert (klicken zum Aktivieren)",
+  "portableterminal.configuration.general": "Allgemein"
 }

@@ -32,5 +32,6 @@
   "gui.portableterminal.sort.id.desc": "ID: 내림차순",
   "gui.portableterminal.sort.mod.asc": "모드: 오름차순",
   "gui.portableterminal.sort.mod.desc": "모드: 내림차순",
-  "gui.portableterminal.sort.none": "정렬 안 됨 (클릭하여 활성화)"
+  "gui.portableterminal.sort.none": "정렬 안 됨 (클릭하여 활성화)",
+  "portableterminal.configuration.general": "일반"
 }

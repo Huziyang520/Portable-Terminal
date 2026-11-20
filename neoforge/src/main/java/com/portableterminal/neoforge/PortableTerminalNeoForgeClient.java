@@ -4,11 +4,9 @@ import com.portableterminal.PortableTerminalClient;
 import com.portableterminal.PortableTerminalMod;
 import com.portableterminal.client.gui.PortableTerminalScreen;
 import com.portableterminal.client.keybind.KeyBindHandler;
-import com.portableterminal.config.ModConfigScreen;
 import com.portableterminal.menu.ModMenuTypes;
 import com.portableterminal.network.TerminalItemsSyncPacket;
 import com.portableterminal.platform.ClientSender;
-import com.portableterminal.platform.Services;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -17,7 +15,6 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
-import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -31,11 +28,6 @@ public class PortableTerminalNeoForgeClient {
 		// 1.21.x 的客户端发包入口与服务端同在一个类里。
 		ClientSender.install(PacketDistributor::sendToServer);
 
-		// Optional: the config button only exists when Cloth Config is installed.
-		if (clothConfigLoaded()) {
-			container.registerExtensionPoint(IConfigScreenFactory.class,
-				(IConfigScreenFactory) (modContainer, parent) -> ModConfigScreen.create(parent));
-		}
 
 		modBus.addListener(this::registerPayloads);
 		modBus.addListener(this::registerKeyMappings);
@@ -63,8 +55,4 @@ public class PortableTerminalNeoForgeClient {
 		PortableTerminalClient.tick(Minecraft.getInstance());
 	}
 
-	private static boolean clothConfigLoaded() {
-		return Services.PLATFORM.isModLoaded("cloth-config")
-			|| Services.PLATFORM.isModLoaded("cloth_config");
-	}
 }

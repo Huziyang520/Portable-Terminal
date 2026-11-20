@@ -32,5 +32,6 @@
   "gui.portableterminal.sort.id.desc": "ID: по убыванию",
   "gui.portableterminal.sort.mod.asc": "Мод: по возрастанию",
   "gui.portableterminal.sort.mod.desc": "Мод: по убыванию",
-  "gui.portableterminal.sort.none": "Не сортировано (нажмите)"
+  "gui.portableterminal.sort.none": "Не сортировано (нажмите)",
+  "portableterminal.configuration.general": "Общие"
 }

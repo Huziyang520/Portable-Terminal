@@ -3,8 +3,6 @@ package com.portableterminal.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.portableterminal.PortableTerminalMod;
 import com.portableterminal.menu.PortableTerminalLayout;
 import com.portableterminal.platform.Services;
@@ -15,56 +13,71 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ModConfig {
+/**
+ * 运行期配置快照。
+ *
+ * <p>设置项来自各加载器注册的 spec（NeoForge 原生 / Fabric 走 FCAP / Forge 1.20.1 走 NCP），
+ * 业务代码只读这里的静态字段。排序偏好与界面行数属于玩家状态，仍保存在 JSON 里。</p>
+ */
+public final class ModConfig {
+
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-	private static final String FILE_NAME = "portable_terminal_client.json";
+	private static final String STATE_FILE = "portable_terminal_client.json";
 
-	public static int scanRadius = 8;
-	public static boolean masterSwitch = true;
-	public static List<String> blacklistBlockIds = new ArrayList<>();
-	public static String sortConfig = "";
-	/** Visible terminal rows; the GUI size follows from this. */
-	public static int terminalRows = PortableTerminalLayout.DEFAULT_ROWS;
+	public static volatile int scanRadius = ConfigSchema.DEFAULT_SCAN_RADIUS;
+	public static volatile boolean masterSwitch = ConfigSchema.DEFAULT_MASTER_SWITCH;
+	public static volatile int terminalRows = ConfigSchema.DEFAULT_TERMINAL_ROWS;
+	public static volatile String sortConfig = "";
 
-	/** Resolved lazily: the config directory is only known once the loader is up. */
-	private static Path configPath() {
-		return Services.PLATFORM.getConfigDir().resolve(FILE_NAME);
+	private static final List<String> BLACKLIST = new ArrayList<>();
+
+	private ModConfig() {
 	}
 
-	public static void load() {
-		Path path = configPath();
+	public static List<String> blacklist() {
+		return BLACKLIST;
+	}
+
+	/** spec 载入/重载后把值刷进快照；缺项落回登记表默认值并夹到范围内。 */
+	public static void applyAll(boolean master, int radius, List<String> blacklist) {
+		masterSwitch = master;
+		scanRadius = Math.max(ConfigSchema.MIN_SCAN_RADIUS, Math.min(ConfigSchema.MAX_SCAN_RADIUS, radius));
+		BLACKLIST.clear();
+		if (blacklist != null) {
+			for (String id : blacklist) {
+				if (id != null && !id.isBlank()) {
+					BLACKLIST.add(id.trim());
+				}
+			}
+		}
+	}
+
+	/** 界面上的 +/- 改行数：写进玩家状态文件，下次开终端沿用。 */
+	public static void setRows(int rows) {
+		int next = PortableTerminalLayout.clampRows(rows);
+		if (next == terminalRows) {
+			return;
+		}
+		terminalRows = next;
+		saveState();
+	}
+
+	public static void loadState() {
+		Path path = statePath();
 		if (!Files.exists(path)) {
-			createDefault();
 			return;
 		}
 		try {
 			String raw = Files.readString(path);
 			StringBuilder sb = new StringBuilder();
 			for (String line : raw.split("\n")) {
-				String trimmed = line.trim();
-				if (!trimmed.startsWith("//")) {
+				if (!line.trim().startsWith("//")) {
 					sb.append(line).append("\n");
 				}
 			}
-			String json = sb.toString();
-			JsonObject obj = GSON.fromJson(json, JsonObject.class);
+			JsonObject obj = GSON.fromJson(sb.toString(), JsonObject.class);
 			if (obj == null) {
-				createDefault();
 				return;
-			}
-
-			if (obj.has("scanRadius")) {
-				scanRadius = clamp(obj.get("scanRadius").getAsInt(), 0, 16);
-			}
-			if (obj.has("masterSwitch")) {
-				masterSwitch = obj.get("masterSwitch").getAsBoolean();
-			}
-			if (obj.has("blacklistBlockIds") && obj.get("blacklistBlockIds").isJsonArray()) {
-				JsonArray arr = obj.getAsJsonArray("blacklistBlockIds");
-				blacklistBlockIds.clear();
-				for (JsonElement e : arr) {
-					blacklistBlockIds.add(e.getAsString());
-				}
 			}
 			if (obj.has("sortConfig")) {
 				sortConfig = obj.get("sortConfig").getAsString();
@@ -73,55 +86,22 @@ public class ModConfig {
 				terminalRows = PortableTerminalLayout.clampRows(obj.get("terminalRows").getAsInt());
 			}
 		} catch (Exception e) {
-			PortableTerminalMod.LOGGER.error("Failed to load config, using defaults.", e);
-			createDefault();
+			PortableTerminalMod.LOGGER.error("Failed to read the terminal state file, keeping defaults.", e);
 		}
 	}
 
-	public static void save() {
+	public static void saveState() {
 		JsonObject obj = new JsonObject();
-		obj.addProperty("scanRadius", scanRadius);
-		obj.addProperty("masterSwitch", masterSwitch);
-
-		JsonArray arr = new JsonArray();
-		for (String id : blacklistBlockIds) {
-			arr.add(id);
-		}
-		obj.add("blacklistBlockIds", arr);
 		obj.addProperty("sortConfig", sortConfig);
 		obj.addProperty("terminalRows", terminalRows);
-
 		try {
-			Files.writeString(configPath(), GSON.toJson(obj));
+			Files.writeString(statePath(), GSON.toJson(obj));
 		} catch (IOException e) {
-			PortableTerminalMod.LOGGER.error("Failed to save config.", e);
+			PortableTerminalMod.LOGGER.error("Failed to write the terminal state file.", e);
 		}
 	}
 
-	public static void reload() {
-		load();
-	}
-
-	private static void createDefault() {
-		String defaultContent = "{\n" +
-				"  // 容器扫描半径（切比雪夫距离），范围 0~16，超出自动修正\n" +
-				"  \"scanRadius\": 8,\n" +
-				"  // 模组总开关（false 完全禁用）\n" +
-				"  \"masterSwitch\": true,\n" +
-				"  // 黑名单方块ID列表，这些方块内的物品不会被扫描和存取\n" +
-				"  // 示例：[\"minecraft:furnace\", \"minecraft:hopper\", \"minecraft:barrel\"]\n" +
-				"  \"blacklistBlockIds\": [],\n" +
-				"  // 终端显示行数（3~6），决定终端界面的高度\n" +
-				"  \"terminalRows\": 4\n" +
-				"}\n";
-		try {
-			Files.writeString(configPath(), defaultContent);
-		} catch (IOException e) {
-			PortableTerminalMod.LOGGER.error("Failed to create default config.", e);
-		}
-	}
-
-	private static int clamp(int val, int min, int max) {
-		return Math.max(min, Math.min(max, val));
+	private static Path statePath() {
+		return Services.PLATFORM.getConfigDir().resolve(STATE_FILE);
 	}
 }

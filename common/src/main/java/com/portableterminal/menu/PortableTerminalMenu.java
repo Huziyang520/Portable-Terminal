@@ -496,13 +496,13 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		for (int i = 0; i < sortDirs.length; i++) {
 			if (sortDirs[i] != SortDirection.NONE) {
 				ModConfig.sortConfig = SORT_PERSIST_KEYS[i] + ":" + sortDirs[i].name();
-				ModConfig.save();
+				ModConfig.saveState();
 				return;
 			}
 		}
 		// 全部为 NONE 时清空配置
 		ModConfig.sortConfig = "";
-		ModConfig.save();
+		ModConfig.saveState();
 	}
 
 	/** 仅对已聚合的物品重新排序并刷新显示，不重新扫描容器 */
@@ -533,7 +533,7 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 					BlockEntity be = level.getBlockEntity(pos);
 					if (accessAt(be) == null) continue;
 					String blockId = BuiltInRegistries.BLOCK.getKey(be.getBlockState().getBlock()).toString();
-					if (ModConfig.blacklistBlockIds.contains(blockId)) continue;
+					if (ModConfig.blacklist().contains(blockId)) continue;
 					positions.add(pos);
 				}
 			}

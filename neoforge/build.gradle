@@ -3,8 +3,9 @@ plugins {
     id 'net.neoforged.moddev'
 }
 
+sourceSets.main.java.srcDir rootProject.file('../../spec/java')
+
 dependencies {
-    compileOnly("${cloth_config_neoforge}") { transitive = false }
     // 可选：JEI 避让。只编译期引用仓库内自带的 API 工件，不打包、不设必装依赖。
     compileOnly files("../common/libs/${jei_api_jar}")
 }
