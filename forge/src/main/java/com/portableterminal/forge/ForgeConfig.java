@@ -1,6 +1,7 @@
 package com.portableterminal.forge;
 
 import com.portableterminal.config.ConfigSchema;
+import com.portableterminal.config.InsertOrder;
 import com.portableterminal.config.ModConfig;
 import net.minecraftforge.common.ForgeConfigSpec;
 
@@ -19,6 +20,7 @@ public final class ForgeConfig {
 	private static final ForgeConfigSpec.BooleanValue MASTER_SWITCH;
 	private static final ForgeConfigSpec.IntValue SCAN_RADIUS;
 	private static final ForgeConfigSpec.ConfigValue<List<? extends String>> BLACKLIST;
+	private static final ForgeConfigSpec.EnumValue<InsertOrder> INSERT_ORDER;
 
 	static {
 		ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -40,6 +42,12 @@ public final class ForgeConfig {
 			.translation(ConfigSchema.translationKey(ConfigSchema.KEY_BLACKLIST))
 			.defineList(ConfigSchema.KEY_BLACKLIST, List.<String>of(), IS_STRING);
 
+		INSERT_ORDER = builder
+			.comment("Which container gets items first when inserting.",
+				"NEAREST = closest first, FARTHEST = farthest first, COORDINATES = by block position.")
+			.translation(ConfigSchema.translationKey(ConfigSchema.KEY_INSERT_ORDER))
+			.defineEnum(ConfigSchema.KEY_INSERT_ORDER, ConfigSchema.DEFAULT_INSERT_ORDER);
+
 		builder.pop();
 		SPEC = builder.build();
 	}
@@ -55,6 +63,6 @@ public final class ForgeConfig {
 		if (!SPEC.isLoaded()) {
 			return;
 		}
-		ModConfig.applyAll(MASTER_SWITCH.get(), SCAN_RADIUS.get(), List.copyOf(BLACKLIST.get()));
+		ModConfig.applyAll(MASTER_SWITCH.get(), SCAN_RADIUS.get(), List.copyOf(BLACKLIST.get()), INSERT_ORDER.get());
 	}
 }

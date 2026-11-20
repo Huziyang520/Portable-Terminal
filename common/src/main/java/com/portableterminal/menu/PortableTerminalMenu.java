@@ -16,6 +16,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.Container;
@@ -27,6 +28,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.chunk.LevelChunk;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -59,8 +61,18 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 	public static final int SCROLLBAR_WIDTH = PortableTerminalLayout.SCROLLBAR_WIDTH;
 	public static final int OFFHAND_X = PortableTerminalLayout.OFFHAND_X;
 
-	/** 终端可见行数。客户端配置决定，并在打开终端时随包发给服务端，两端布局才一致。 */
-	private final int rows;
+	/**
+	 * 终端槽位固定按最大行数创建，行数只影响「显示几行」。
+	 * 这样改行数就只是客户端重排布局，不必重开界面（重开会让原版把光标拽回屏幕中心），
+	 * 两端槽位总数也永远一致，不会出现同步包长度对不上导致的越界。
+	 */
+	public static final int CAPACITY_ROWS = PortableTerminalLayout.MAX_ROWS;
+	/** 不可见行的槽位挪到屏幕外，否则会与上移后的背包槽重叠、被原版命中。 */
+	private static final int HIDDEN_SLOT_X = -10000;
+	private static final int HIDDEN_SLOT_Y = -10000;
+
+	/** 当前显示行数（只影响布局，不影响槽位总数）。 */
+	private int rows;
 
 	private static final Map<UUID, List<BlockPos>> PENDING_POSITIONS = new HashMap<>();
 	private final List<BlockPos> containerPositions = new ArrayList<>();
@@ -90,6 +102,8 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 	private static final String[] SORT_PERSIST_KEYS = {"name", "count", "id", "mod"};
 
 	private final List<TerminalSlot> terminalSlots = new ArrayList<>();
+	private final Inventory playerInventory;
+	private final VirtualTerminalContainer terminalContainer;
 	private int scrollOffset = 0;
 	private String searchQuery = "";
 
@@ -106,35 +120,11 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 			if (access != null) containers.add(access);
 		}
 
+		this.playerInventory = playerInventory;
+		this.terminalContainer = new VirtualTerminalContainer(terminalSlotCount());
+
 		loadSortConfig();
-
-		// 终端虚拟槽（索引 0 .. terminalSlotCount()-1）
-		VirtualTerminalContainer terminalContainer = new VirtualTerminalContainer(terminalSlotCount());
-		for (int row = 0; row < this.rows; row++) {
-			for (int col = 0; col < COLS; col++) {
-				int idx = row * COLS + col;
-				int sx = TERM_LEFT + col * SLOT_SIZE;
-				int sy = TERM_TOP + row * SLOT_SIZE;
-				TerminalSlot slot = new TerminalSlot(terminalContainer, idx, sx, sy);
-				terminalSlots.add(slot);
-				this.addSlot(slot);
-			}
-		}
-
-		// 主背包 3x9 + 快捷栏 + 副手（副手与快捷栏同一行，下边对齐）
-		int invTop = PortableTerminalLayout.invTop(this.rows);
-		int hotbarTop = PortableTerminalLayout.hotbarTop(this.rows);
-		for (int row = 0; row < 3; row++) {
-			for (int col = 0; col < 9; col++) {
-				int sx = INV_LEFT + col * SLOT_SIZE;
-				int sy = invTop + row * SLOT_SIZE;
-				this.addSlot(new Slot(playerInventory, col + row * 9 + 9, sx, sy));
-			}
-		}
-		for (int col = 0; col < 9; col++) {
-			this.addSlot(new Slot(playerInventory, col, INV_LEFT + col * SLOT_SIZE, hotbarTop));
-		}
-		this.addSlot(new Slot(playerInventory, 40, OFFHAND_X, PortableTerminalLayout.offhandY(this.rows)));
+		rebuildSlots();
 	}
 
 	public int getRows() {
@@ -142,7 +132,73 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 	}
 
 	public int terminalSlotCount() {
-		return PortableTerminalLayout.terminalSlotCount(rows);
+		return PortableTerminalLayout.terminalSlotCount(CAPACITY_ROWS);
+	}
+
+	/**
+	 * 改显示行数：只按新行数重建槽位（数量与顺序不变），不重开界面。
+	 * 槽位坐标在 26.x 里是 final，改不了，所以重建同一批槽位对象。
+	 */
+	public void applyViewRows(int viewRows) {
+		int next = PortableTerminalLayout.clampRows(viewRows);
+		if (next == this.rows) {
+			return;
+		}
+		this.rows = next;
+		rebuildSlots();
+		this.scrollOffset = Math.min(this.scrollOffset, getMaxScroll());
+		updateTerminalSlots();
+	}
+
+	/**
+	 * 按当前 {@link #rows} 重建全部槽位：终端槽（固定最大行数）+ 主背包 + 快捷栏 + 副手。
+	 *
+	 * <p>槽位总数与顺序永远不变，所以第二次起是**逐位替换槽位对象**而不是清空重加：
+	 * 原版 {@code lastSlots} / {@code remoteSlots} 是按索引跟着 {@code addSlot} 扩容的，
+	 * 清空会让它们与 {@code slots} 长度对不上。</p>
+	 */
+	private void rebuildSlots() {
+		List<Slot> fresh = new ArrayList<>();
+		List<TerminalSlot> freshTerminal = new ArrayList<>();
+		for (int row = 0; row < CAPACITY_ROWS; row++) {
+			for (int col = 0; col < COLS; col++) {
+				int idx = row * COLS + col;
+				boolean visible = row < this.rows;
+				TerminalSlot slot = new TerminalSlot(terminalContainer, idx,
+					visible ? TERM_LEFT + col * SLOT_SIZE : HIDDEN_SLOT_X,
+					visible ? TERM_TOP + row * SLOT_SIZE : HIDDEN_SLOT_Y);
+				fresh.add(slot);
+				freshTerminal.add(slot);
+			}
+		}
+
+		int invTop = PortableTerminalLayout.invTop(this.rows);
+		int hotbarTop = PortableTerminalLayout.hotbarTop(this.rows);
+		for (int row = 0; row < 3; row++) {
+			for (int col = 0; col < 9; col++) {
+				fresh.add(new Slot(playerInventory, col + row * 9 + 9,
+					INV_LEFT + col * SLOT_SIZE, invTop + row * SLOT_SIZE));
+			}
+		}
+		for (int col = 0; col < 9; col++) {
+			fresh.add(new Slot(playerInventory, col, INV_LEFT + col * SLOT_SIZE, hotbarTop));
+		}
+		fresh.add(new Slot(playerInventory, 40, OFFHAND_X, PortableTerminalLayout.offhandY(this.rows)));
+
+		terminalSlots.clear();
+		terminalSlots.addAll(freshTerminal);
+
+		if (this.slots.isEmpty()) {
+			for (Slot slot : fresh) {
+				this.addSlot(slot);
+			}
+			return;
+		}
+		for (int i = 0; i < fresh.size() && i < this.slots.size(); i++) {
+			Slot slot = fresh.get(i);
+			slot.index = i;
+			this.slots.set(i, slot);
+		}
 	}
 
 	// ==================== 终端显示 / 滚动 / 搜索 ====================
@@ -160,6 +216,9 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 					: ItemStack.EMPTY;
 				terminalSlots.get(slotIdx).set(stack);
 			}
+		}
+		for (int i = this.rows * COLS; i < terminalSlots.size(); i++) {
+			terminalSlots.get(i).set(ItemStack.EMPTY);
 		}
 	}
 
@@ -254,7 +313,16 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 
 	@Override
 	public void initializeContents(int stateId, List<ItemStack> items, ItemStack carried) {
-		super.initializeContents(stateId, items, carried);
+		if (items.size() == this.slots.size()) {
+			super.initializeContents(stateId, items, carried);
+		} else {
+			// 两端槽位数本该一致；真不一致时原版会直接越界崩客户端，这里退化成按较小长度同步。
+			int count = Math.min(items.size(), this.slots.size());
+			for (int i = 0; i < count; i++) {
+				this.slots.get(i).set(items.get(i));
+			}
+			this.setCarried(carried);
+		}
 		updateTerminalSlots();
 	}
 
@@ -533,24 +601,57 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		rebuildDisplayedItems();
 	}
 
+	/**
+	 * 扫描玩家周围的容器。
+	 *
+	 * <p>不逐格遍历立方体：半径 128 时那是一个 257³ 的循环（约一千七百万次 getBlockEntity），
+	 * 打开终端会明显卡顿。改为只枚举范围内**已加载区块的方块实体表**，代价与容器数量成正比。</p>
+	 */
 	public static List<BlockPos> scanNearbyContainers(ServerPlayer player) {
 		List<BlockPos> positions = new ArrayList<>();
-		Level level = player.level();
-		BlockPos playerPos = player.blockPosition();
 		int radius = ModConfig.scanRadius;
-		for (int dx = -radius; dx <= radius; dx++) {
-			for (int dy = -radius; dy <= radius; dy++) {
-				for (int dz = -radius; dz <= radius; dz++) {
-					BlockPos pos = playerPos.offset(dx, dy, dz);
-					BlockEntity be = level.getBlockEntity(pos);
+		if (radius <= 0 || !(player.level() instanceof ServerLevel level)) {
+			return positions;
+		}
+		BlockPos origin = player.blockPosition();
+		double radiusSqr = (double) radius * radius;
+		int minChunkX = (origin.getX() - radius) >> 4;
+		int maxChunkX = (origin.getX() + radius) >> 4;
+		int minChunkZ = (origin.getZ() - radius) >> 4;
+		int maxChunkZ = (origin.getZ() + radius) >> 4;
+
+		for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+			for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+				LevelChunk chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
+				if (chunk == null) continue;
+				for (Map.Entry<BlockPos, BlockEntity> entry : chunk.getBlockEntities().entrySet()) {
+					BlockPos pos = entry.getKey();
+					if (pos.distSqr(origin) > radiusSqr) continue;
+					BlockEntity be = entry.getValue();
 					if (accessAt(be) == null) continue;
 					String blockId = BuiltInRegistries.BLOCK.getKey(be.getBlockState().getBlock()).toString();
 					if (ModConfig.blacklist().contains(blockId)) continue;
-					positions.add(pos);
+					positions.add(pos.immutable());
 				}
 			}
 		}
+
+		sortByInsertOrder(positions, origin);
 		return positions;
+	}
+
+	/** 存入顺序：默认由近到远；也可配成由远到近或坐标升序。 */
+	private static void sortByInsertOrder(List<BlockPos> positions, BlockPos origin) {
+		switch (ModConfig.insertOrder) {
+			case FARTHEST -> positions.sort((a, b) -> Double.compare(b.distSqr(origin), a.distSqr(origin)));
+			case COORDINATES -> positions.sort((a, b) -> {
+				int cmp = Integer.compare(a.getX(), b.getX());
+				if (cmp != 0) return cmp;
+				cmp = Integer.compare(a.getY(), b.getY());
+				return cmp != 0 ? cmp : Integer.compare(a.getZ(), b.getZ());
+			});
+			default -> positions.sort((a, b) -> Double.compare(a.distSqr(origin), b.distSqr(origin)));
+		}
 	}
 
 	// ==================== 内部类 ====================

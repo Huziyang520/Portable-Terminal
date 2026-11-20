@@ -7,7 +7,6 @@ import com.portableterminal.PortableTerminalClient;
 import com.portableterminal.config.ModConfig;
 import com.portableterminal.menu.PortableTerminalLayout;
 import com.portableterminal.menu.PortableTerminalMenu;
-import com.portableterminal.network.OpenTerminalPacket;
 import com.portableterminal.network.TerminalSlotClickPacket;
 import com.portableterminal.platform.ClientSender;
 import net.minecraft.client.Minecraft;
@@ -64,14 +63,9 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private static final int COL_SCROLL_THUMB2 = 0xFF808080;
 	private static final int COL_TEXT          = 0xFF404040;
 
-	private final int rows;
-	private final int guiWidth;
-	private final int guiHeight;
-
-	/** 重开界面后要恢复到的光标位置（GUI 坐标）；NaN 表示无需恢复。 */
-	private static double restoreGuiMouseX = Double.NaN;
-	private static double restoreGuiMouseY = Double.NaN;
-	private static int restoreFrames;
+	private int rows;
+	private int guiWidth;
+	private int guiHeight;
 
 	private static final String[] SORT_KEYS = {"name", "count", "id", "mod"};
 
@@ -113,6 +107,9 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	@Override
 	protected void init() {
 		super.init();
+		// 面板高度跟着显示行数走。26.x 的 imageHeight 是 final，不能改，所以自己按 guiHeight 居中。
+		this.guiHeight = PortableTerminalLayout.imageHeight(this.rows);
+		this.topPos = (this.height - this.guiHeight) / 2;
 
 		// 打开界面即接管服务器同步包；关闭时归还（见 onClose）
 		PortableTerminalClient.setSyncReceiver(this::onItemsSynced);
@@ -190,19 +187,24 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		this.menu.cycleSortDir(index);
 	}
 
-	/** 切换显示行数：写进配置并重新开一次终端，服务端据此重建菜单。 */
+	/**
+	 * 切换显示行数。
+	 *
+	 * <p>槽位总数固定，行数只是布局：就地重建槽位与面板尺寸即可，**不重开界面**。
+	 * 重开（{@code Minecraft.setScreen}）会让原版 {@code MouseHandler.releaseMouse()}
+	 * 把光标挪到窗口正中，那不是按键该有的行为。</p>
+	 */
 	private void changeRows(int delta) {
 		int next = PortableTerminalLayout.clampRows(this.rows + delta);
 		if (next == this.rows) {
 			return;
 		}
-		// 槽位布局变了，服务端必须重建菜单，客户端随之重开界面；原版重开时会把光标
-		// 挪到屏幕正中，所以先记下当前位置，等新界面第一帧再放回去。
-		restoreGuiMouseX = this.lastMouseX;
-		restoreGuiMouseY = this.lastMouseY;
-		restoreFrames = 5;
+		this.rows = next;
 		ModConfig.setRows(next);
-		ClientSender.sendToServer(new OpenTerminalPacket(next));
+		this.menu.applyViewRows(next);
+		this.guiHeight = this.imageHeight;
+		this.inventoryLabelY = PortableTerminalLayout.invTop(next) - 11;
+		this.rebuildWidgets();
 	}
 
 	private void onItemsSynced(List<ItemStack> items) {
@@ -266,17 +268,6 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 	@Override
 	protected void renderBg(GuiGraphics gfx, float partialTick, int mouseX, int mouseY) {
-		// 切行数会重开界面，而原版开界面时 MouseHandler.releaseMouse() 会把光标挪到屏幕正中；
-		// 它的时机可能晚于新界面的第一帧，所以连续压几帧再放弃，避免和它抢。
-		if (!Double.isNaN(restoreGuiMouseX)) {
-			if (restoreFrames-- > 0) {
-				double scale = Minecraft.getInstance().getWindow().getGuiScale();
-				GLFW.glfwSetCursorPos(Minecraft.getInstance().getWindow().getWindow(),
-					restoreGuiMouseX * scale, restoreGuiMouseY * scale);
-			} else {
-				restoreGuiMouseX = Double.NaN;
-			}
-		}
 		this.lastMouseX = mouseX;
 		this.lastMouseY = mouseY;
 		int srcW = PortableTerminalLayout.PANEL_SOURCE_WIDTH;
