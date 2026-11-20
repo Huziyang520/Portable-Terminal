@@ -40,13 +40,14 @@ public final class PortableTerminalSpec {
 		BLACKLIST = builder
 			.comment("Block ids the terminal ignores, for example minecraft:furnace.")
 			.translation(ConfigSchema.translationKey(ConfigSchema.KEY_BLACKLIST))
-			.defineList(ConfigSchema.KEY_BLACKLIST, List.<String>of(), IS_STRING);
+			// allowEmpty + 新元素工厂：原生配置屏幕的列表页据此给出「新建元素」按钮。
+			.defineListAllowEmpty(ConfigSchema.KEY_BLACKLIST, List.of(), () -> "", IS_STRING);
 
 		INSERT_ORDER = builder
 			.comment("Which container gets items first when inserting.",
 				"NEAREST = closest first, FARTHEST = farthest first, COORDINATES = by block position.")
 			.translation(ConfigSchema.translationKey(ConfigSchema.KEY_INSERT_ORDER))
-			.defineEnum(ConfigSchema.KEY_INSERT_ORDER, ConfigSchema.DEFAULT_INSERT_ORDER);
+			.defineEnum(ConfigSchema.KEY_INSERT_ORDER, InsertOrder.NEAREST);
 
 		builder.pop();
 		SPEC = builder.build();
@@ -60,6 +61,6 @@ public final class PortableTerminalSpec {
 		if (!SPEC.isLoaded()) {
 			return;
 		}
-		ModConfig.applyAll(MASTER_SWITCH.get(), SCAN_RADIUS.get(), List.copyOf(BLACKLIST.get()), INSERT_ORDER.get());
+		ModConfig.applyAll(MASTER_SWITCH.get(), SCAN_RADIUS.get(), List.copyOf(BLACKLIST.get()), INSERT_ORDER.get().name());
 	}
 }

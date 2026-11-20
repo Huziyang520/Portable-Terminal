@@ -632,15 +632,18 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 
 	/** 存入顺序：默认由近到远；也可配成由远到近或坐标升序。 */
 	private static void sortByInsertOrder(List<BlockPos> positions, BlockPos origin) {
-		switch (ModConfig.insertOrder) {
-			case FARTHEST -> positions.sort((a, b) -> Double.compare(b.distSqr(origin), a.distSqr(origin)));
-			case COORDINATES -> positions.sort((a, b) -> {
+		String order = ModConfig.insertOrder;
+		if (com.portableterminal.config.ConfigSchema.ORDER_FARTHEST.equals(order)) {
+			positions.sort((a, b) -> Double.compare(b.distSqr(origin), a.distSqr(origin)));
+		} else if (com.portableterminal.config.ConfigSchema.ORDER_COORDINATES.equals(order)) {
+			positions.sort((a, b) -> {
 				int cmp = Integer.compare(a.getX(), b.getX());
 				if (cmp != 0) return cmp;
 				cmp = Integer.compare(a.getY(), b.getY());
 				return cmp != 0 ? cmp : Integer.compare(a.getZ(), b.getZ());
 			});
-			default -> positions.sort((a, b) -> Double.compare(a.distSqr(origin), b.distSqr(origin)));
+		} else {
+			positions.sort((a, b) -> Double.compare(a.distSqr(origin), b.distSqr(origin)));
 		}
 	}
 
