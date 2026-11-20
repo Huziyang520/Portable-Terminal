@@ -33,5 +33,9 @@
   "gui.portableterminal.sort.mod.asc": "模组：正序",
   "gui.portableterminal.sort.mod.desc": "模组：倒序",
   "gui.portableterminal.sort.none": "未排序（点击启用）",
-  "portableterminal.configuration.general": "通用"
+  "portableterminal.configuration.general": "通用",
+  "config.portableterminal.insert_order": "容器存入顺序",
+  "config.portableterminal.insert_order.nearest": "最近的优先",
+  "config.portableterminal.insert_order.farthest": "最远的优先",
+  "config.portableterminal.insert_order.coordinates": "按坐标顺序"
 }

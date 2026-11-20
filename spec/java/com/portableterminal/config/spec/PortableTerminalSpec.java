@@ -1,6 +1,7 @@
 package com.portableterminal.config.spec;
 
 import com.portableterminal.config.ConfigSchema;
+import com.portableterminal.config.InsertOrder;
 import com.portableterminal.config.ModConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
@@ -19,6 +20,7 @@ public final class PortableTerminalSpec {
 	public static final ModConfigSpec.BooleanValue MASTER_SWITCH;
 	public static final ModConfigSpec.IntValue SCAN_RADIUS;
 	public static final ModConfigSpec.ConfigValue<List<? extends String>> BLACKLIST;
+	public static final ModConfigSpec.EnumValue<InsertOrder> INSERT_ORDER;
 
 	static {
 		ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -40,6 +42,12 @@ public final class PortableTerminalSpec {
 			.translation(ConfigSchema.translationKey(ConfigSchema.KEY_BLACKLIST))
 			.defineList(ConfigSchema.KEY_BLACKLIST, List.<String>of(), IS_STRING);
 
+		INSERT_ORDER = builder
+			.comment("Which container gets items first when inserting.",
+				"NEAREST = closest first, FARTHEST = farthest first, COORDINATES = by block position.")
+			.translation(ConfigSchema.translationKey(ConfigSchema.KEY_INSERT_ORDER))
+			.defineEnum(ConfigSchema.KEY_INSERT_ORDER, ConfigSchema.DEFAULT_INSERT_ORDER);
+
 		builder.pop();
 		SPEC = builder.build();
 	}
@@ -52,6 +60,6 @@ public final class PortableTerminalSpec {
 		if (!SPEC.isLoaded()) {
 			return;
 		}
-		ModConfig.applyAll(MASTER_SWITCH.get(), SCAN_RADIUS.get(), List.copyOf(BLACKLIST.get()));
+		ModConfig.applyAll(MASTER_SWITCH.get(), SCAN_RADIUS.get(), List.copyOf(BLACKLIST.get()), INSERT_ORDER.get());
 	}
 }

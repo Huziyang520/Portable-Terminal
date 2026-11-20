@@ -13,8 +13,10 @@ public final class ConfigSchema {
 	public static final String KEY_SCAN_RADIUS = "scan_radius";
 	public static final String KEY_TERMINAL_ROWS = "terminal_rows";
 	public static final String KEY_BLACKLIST = "blacklist";
+	public static final String KEY_INSERT_ORDER = "insert_order";
 
 	public static final boolean DEFAULT_MASTER_SWITCH = true;
+	public static final InsertOrder DEFAULT_INSERT_ORDER = InsertOrder.NEAREST;
 	public static final int DEFAULT_SCAN_RADIUS = 8;
 	public static final int MAX_SCAN_RADIUS = 128;
 	public static final int MIN_SCAN_RADIUS = 0;

@@ -33,5 +33,9 @@
   "gui.portableterminal.sort.mod.asc": "Mod: crescente",
   "gui.portableterminal.sort.mod.desc": "Mod: decrescente",
   "gui.portableterminal.sort.none": "Não ordenado (clique para ativar)",
-  "portableterminal.configuration.general": "Geral"
+  "portableterminal.configuration.general": "Geral",
+  "config.portableterminal.insert_order": "Container insert order",
+  "config.portableterminal.insert_order.nearest": "Nearest first",
+  "config.portableterminal.insert_order.farthest": "Farthest first",
+  "config.portableterminal.insert_order.coordinates": "By coordinates"
 }
