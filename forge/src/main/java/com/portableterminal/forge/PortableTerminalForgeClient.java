@@ -6,7 +6,9 @@ import com.portableterminal.client.gui.PortableTerminalScreen;
 import com.portableterminal.client.keybind.KeyBindHandler;
 import com.portableterminal.menu.ModMenuTypes;
 import com.portableterminal.platform.ClientSender;
+import com.huziyang.neoconfigurationscreenport.api.ListElements;
 import com.huziyang.neoconfigurationscreenport.forge.ConfigScreenRegistration;
+import com.portableterminal.config.ConfigSchema;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraftforge.api.distmarker.Dist;
@@ -33,6 +35,8 @@ public class PortableTerminalForgeClient {
 
 			// 配置界面由前置 Neo Configuration Screen Port 提供，这一行同时点亮模组列表的「配置」按钮。
 			ConfigScreenRegistration.register(PortableTerminalMod.MOD_ID);
+			// Forge 的 spec 没有「新元素工厂」，列表页的新增按钮由 NCP 这个注册点提供。
+			ListElements.register(PortableTerminalMod.MOD_ID, ConfigSchema.KEY_BLACKLIST, () -> "minecraft:");
 		});
 	}
 
