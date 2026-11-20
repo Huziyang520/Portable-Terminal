@@ -201,8 +201,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		restoreGuiMouseX = this.lastMouseX;
 		restoreGuiMouseY = this.lastMouseY;
 		restoreFrames = 5;
-		ModConfig.terminalRows = next;
-		ModConfig.save();
+		ModConfig.setRows(next);
 		ClientSender.sendToServer(new OpenTerminalPacket(next));
 	}
 

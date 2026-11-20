@@ -4,14 +4,12 @@ import com.portableterminal.PortableTerminalClient;
 import com.portableterminal.PortableTerminalMod;
 import com.portableterminal.client.gui.PortableTerminalScreen;
 import com.portableterminal.client.keybind.KeyBindHandler;
-import com.portableterminal.config.ModConfigScreen;
 import com.portableterminal.menu.ModMenuTypes;
 import com.portableterminal.platform.ClientSender;
-import com.portableterminal.platform.Services;
+import com.huziyang.neoconfigurationscreenport.forge.ConfigScreenRegistration;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.ConfigScreenHandler;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
@@ -33,15 +31,8 @@ public class PortableTerminalForgeClient {
 
 			MenuScreens.register(ModMenuTypes.get(), PortableTerminalScreen::new);
 
-			// Optional: the config button only exists when Cloth Config is installed.
-			// Cloth Config 在 Forge 端的 modId 是 cloth_config（下划线），Fabric 端才是 cloth-config。
-			if (Services.PLATFORM.isModLoaded("cloth-config")
-				|| Services.PLATFORM.isModLoaded("cloth_config")) {
-				ModLoadingContext.get().registerExtensionPoint(
-					ConfigScreenHandler.ConfigScreenFactory.class,
-					() -> new ConfigScreenHandler.ConfigScreenFactory(
-						(mc, parent) -> ModConfigScreen.create(parent)));
-			}
+			// 配置界面由前置 Neo Configuration Screen Port 提供，这一行同时点亮模组列表的「配置」按钮。
+			ConfigScreenRegistration.register(PortableTerminalMod.MOD_ID);
 		});
 	}
 

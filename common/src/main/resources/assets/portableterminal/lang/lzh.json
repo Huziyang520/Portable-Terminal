@@ -32,5 +32,6 @@
   "gui.portableterminal.sort.id.desc": "識：反序",
   "gui.portableterminal.sort.mod.asc": "模：正序",
   "gui.portableterminal.sort.mod.desc": "模：反序",
-  "gui.portableterminal.sort.none": "未排序（點之則啟）"
+  "gui.portableterminal.sort.none": "未排序（點之則啟）",
+  "portableterminal.configuration.general": "通例"
 }

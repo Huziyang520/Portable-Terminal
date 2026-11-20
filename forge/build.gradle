@@ -39,7 +39,8 @@ repositories {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    compileOnly fg.deobf("${cloth_config_forge}") { transitive = false }
+    // 配置界面由前置 Neo Configuration Screen Port 提供（运行期由玩家安装，不进 jar）。
+    compileOnly files("libs/neoconfigurationscreenport-0.7.1-forge-1.20.1.jar")
     // 可选：JEI 避让。只编译期引用仓库内自带的 API 工件，不打包、不设必装依赖。
     compileOnly files("../common/libs/${jei_api_jar}")
 }

@@ -7,6 +7,9 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
@@ -28,6 +31,12 @@ public class PortableTerminalForge {
 	public PortableTerminalForge() {
 		IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
 		MENUS.register(modBus);
+
+		// 设置项交给 Forge 自己的配置系统；界面由 Neo Configuration Screen Port 提供。
+		ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, ForgeConfig.spec(),
+			"portableterminal-client.toml");
+		modBus.addListener((ModConfigEvent.Loading event) -> ForgeConfig.applyAll());
+		modBus.addListener((ModConfigEvent.Reloading event) -> ForgeConfig.applyAll());
 		// 频道的编解码器必须在服务端就绪之前注册（两端共用一套序号）。
 		ForgeTerminalNetwork.register();
 		modBus.addListener(this::commonSetup);
@@ -37,7 +46,7 @@ public class PortableTerminalForge {
 		// DeferredRegister 的值在注册阶段结束后才可用，所以要挪到 enqueueWork 里取。
 		event.enqueueWork(() -> {
 			ModMenuTypes.bind(TERMINAL_MENU.get());
-			com.portableterminal.config.ModConfig.load();
+			com.portableterminal.config.ModConfig.loadState();
 		});
 	}
 }

@@ -25,3 +25,10 @@ mandatory=true
 versionRange="${minecraft_version_range}"
 ordering="NONE"
 side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="neoconfigurationscreenport"
+mandatory=true
+versionRange="[0.7.1,)"
+ordering="AFTER"
+side="CLIENT"
