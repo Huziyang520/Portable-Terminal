@@ -16,7 +16,10 @@ public final class ConfigSchema {
 	public static final String KEY_INSERT_ORDER = "insert_order";
 
 	public static final boolean DEFAULT_MASTER_SWITCH = true;
-	public static final InsertOrder DEFAULT_INSERT_ORDER = InsertOrder.NEAREST;
+	public static final String ORDER_NEAREST = "NEAREST";
+	public static final String ORDER_FARTHEST = "FARTHEST";
+	public static final String ORDER_COORDINATES = "COORDINATES";
+	public static final String DEFAULT_INSERT_ORDER = ORDER_NEAREST;
 	public static final int DEFAULT_SCAN_RADIUS = 16;
 	public static final int MAX_SCAN_RADIUS = 128;
 	public static final int MIN_SCAN_RADIUS = 0;
