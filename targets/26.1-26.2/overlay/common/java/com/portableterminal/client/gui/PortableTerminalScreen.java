@@ -265,7 +265,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			gfx.blurBeforeThisStratum();
 		}
 		gfx.fillGradient(0, 0, this.width, this.height, 0xC0101010, 0xD0101010);
-		Minecraft.getInstance().gui.hud.extractDeferredSubtitles();
+		// 26.1/26.2 的 Gui 没有 hud 字段（26.3 才加了 Hud 拆分），字幕由原版的
+		// extractRenderStateWithTooltipAndSubtitles 负责，这里不要再取 hud，否则 26.1.2 上直接 NoSuchFieldError。
 		// 切行数会重开界面，而原版开界面时 MouseHandler.releaseMouse() 会把光标挪到屏幕正中；
 		// 它的时机可能晚于新界面的第一帧，所以连续压几帧再放弃，避免和它抢。
 		if (!Double.isNaN(restoreGuiMouseX)) {
