@@ -19,8 +19,11 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
-rootProject.name = 'portableterminal'
-includeBuild('build-logic')
-include('common')
-include('fabric')
-include('neoforge')
+rootProject.name = 'portableterminal-26.3'
+includeBuild('../../build-logic')
+include 'common'
+include 'fabric'
+include 'neoforge'
+project(':common').projectDir = file('../../common')
+project(':fabric').projectDir = file('../../fabric')
+project(':neoforge').projectDir = file('../../neoforge')
