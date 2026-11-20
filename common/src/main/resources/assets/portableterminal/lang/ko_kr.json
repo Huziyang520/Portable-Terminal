@@ -33,5 +33,9 @@
   "gui.portableterminal.sort.mod.asc": "모드: 오름차순",
   "gui.portableterminal.sort.mod.desc": "모드: 내림차순",
   "gui.portableterminal.sort.none": "정렬 안 됨 (클릭하여 활성화)",
-  "portableterminal.configuration.general": "일반"
+  "portableterminal.configuration.general": "일반",
+  "config.portableterminal.insert_order": "Container insert order",
+  "config.portableterminal.insert_order.nearest": "Nearest first",
+  "config.portableterminal.insert_order.farthest": "Farthest first",
+  "config.portableterminal.insert_order.coordinates": "By coordinates"
 }

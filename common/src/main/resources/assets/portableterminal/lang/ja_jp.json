@@ -33,5 +33,9 @@
   "gui.portableterminal.sort.mod.asc": "MOD：昇順",
   "gui.portableterminal.sort.mod.desc": "MOD：降順",
   "gui.portableterminal.sort.none": "未ソート（クリックで有効）",
-  "portableterminal.configuration.general": "一般"
+  "portableterminal.configuration.general": "一般",
+  "config.portableterminal.insert_order": "Container insert order",
+  "config.portableterminal.insert_order.nearest": "Nearest first",
+  "config.portableterminal.insert_order.farthest": "Farthest first",
+  "config.portableterminal.insert_order.coordinates": "By coordinates"
 }
