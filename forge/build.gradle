@@ -3,10 +3,6 @@ plugins {
     id 'net.minecraftforge.gradle'
 }
 
-repositories {
-    maven { url = 'https://maven.shedaniel.me/' }
-}
-
 minecraft {
     mappings channel: 'official', version: minecraft_version
 
@@ -35,15 +31,18 @@ minecraft {
     }
 }
 
-dependencies {
-    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    compileOnly fg.deobf('me.shedaniel.cloth:cloth-config-forge:11.1.136') { transitive = false }
-    // JEI（可选前置）：只编译期引用仓库内自带的 API 工件；不打包、不设必装依赖。
-    compileOnly files('../common/libs/jei-1.20.1-common-api-15.62.0.219.jar')
+repositories {
+    // 可选前置只编译期引用，运行时缺失必须不报错。
+    maven { url = 'https://maven.shedaniel.me/' }
+    maven { url = 'https://maven.terraformersmc.com/releases/' }
 }
 
-// 本分支的 Gradle 跑在 Java 21/17 上，而 CurseForgeGradle 1.3.33 要求 JVM 25 ⇒ 不能作为构建插件加载。
-// 发布统一走 文档/上传脚本 的 gradle init 脚本（cfUpload / mrUpload），本文件不再注册 curseforge 任务。
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    compileOnly fg.deobf("${cloth_config_forge}") { transitive = false }
+    // 可选：JEI 避让。只编译期引用仓库内自带的 API 工件，不打包、不设必装依赖。
+    compileOnly files("../common/libs/${jei_api_jar}")
+}
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'

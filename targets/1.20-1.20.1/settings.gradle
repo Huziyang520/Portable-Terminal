@@ -12,8 +12,11 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
-rootProject.name = 'portableterminal'
-includeBuild('build-logic')
-include('common')
-include('fabric')
-include('forge')
+rootProject.name = 'portableterminal-1.20-1.20.1'
+includeBuild('../../build-logic')
+include 'common'
+include 'fabric'
+include 'forge'
+project(':common').projectDir = file('../../common')
+project(':fabric').projectDir = file('../../fabric')
+project(':forge').projectDir = file('../../forge')

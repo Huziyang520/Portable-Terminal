@@ -1,0 +1,22 @@
+pluginManagement {
+    repositories {
+        maven { name = 'Aliyun Gradle Plugin Portal'; url = 'https://maven.aliyun.com/repository/gradle-plugin' }
+        gradlePluginPortal()
+        mavenCentral()
+        maven { name = 'Forge'; url = 'https://maven.minecraftforge.net/' }
+        maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+    }
+}
+
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'portableterminal-1.20.5-1.20.6'
+includeBuild('../../build-logic')
+include 'common'
+include 'fabric'
+include 'neoforge'
+project(':common').projectDir = file('../../common')
+project(':fabric').projectDir = file('../../fabric')
+project(':neoforge').projectDir = file('../../neoforge')

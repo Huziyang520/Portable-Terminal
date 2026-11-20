@@ -3,6 +3,9 @@ plugins {
     id 'maven-publish'
 }
 
+// 产物落点固定为 targets/<区间>/build/<模块>/libs（构建入口也是 -p targets/<区间>）。
+layout.buildDirectory = rootProject.layout.buildDirectory.dir(project.name)
+
 // Release artefact name: <mod_id>-<version>-<loader>-<MC or range>.
 // The version is folded into archivesName, so archiveVersion must be cleared
 // (otherwise Loom's remapJar / the plain jar task appends it a second time).
@@ -21,7 +24,7 @@ java {
 
 // 1.20.2-1.20.4 档：NeoForm/vanilla 产物是 Java 21 字节码（major 65），javac 17 读不了它，
 // 会报“该文件内含版本 65.0, 应为 61.0”并导致整片符号解析失败。因此用 JDK 21 编译，
-// 再用 --release 把本模组产物字节码锁回区间下界的运行时档（1.20.2-1.20.4 仍跑 Java 17）。
+// 再用 --release 把本模组产物字节码锁回区间下界的运行时档。
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     def javaTarget = findProperty('java_target_version')
@@ -35,28 +38,75 @@ tasks.withType(Javadoc).configureEach {
     options.addStringOption('Xdoclint:none', '-quiet')
 }
 
-
-tasks.withType(Jar).configureEach {
-    from(rootProject.file('LICENSE')) {
-        rename { "${it}_${mod_name}" }
+// 只有 ModDevGradle 档需要自己声明仓库：Loom + FG6 的两个旧档换成自定义仓库会改变仓库 id，
+// 让本来就缓存好的元数据全部失效并逼出联网请求。
+if (findProperty('common_backend') != 'loom') {
+    repositories {
+        // 国内镜像优先；官方源在后。
+        maven { name = 'AliyunCentral'; url = 'https://maven.aliyun.com/repository/central' }
+        mavenCentral()
+        maven { name = 'Mojang'; url = 'https://libraries.minecraft.net/' }
+        // Forge 官方源要排在 NeoForged 之前：net.minecraftforge:* 的工件这里能取到，而远端 NeoForged
+        // 不可达时会直接以 TLS 握手失败中断解析，不会退化成 404 继续找下一个仓库。
+        maven { name = 'Forge'; url = 'https://maven.minecraftforge.net/' }
+        maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+        maven { name = 'Sponge'; url = 'https://repo.spongepowered.org/repository/maven-public' }
+        // ModDevGradle 会自己注入 NeoForged 源，但本机 maven.neoforged.net 不可达；已缓存的元数据
+        // 是按某个具体仓库形状落盘的，这里把常见几种形状都列出来让缓存 id 有机会命中。
+        maven { name = 'NeoForge'; url = 'https://maven.neoforged.net/releases' }
+        maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases' }
+        maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases/' }
+        maven { name = 'NeoForgedReleases'; url = 'https://maven.neoforged.net/releases' }
+        // 可选前置（Cloth Config / Mod Menu）只在这两个仓库里。
+        maven { name = 'Shedaniel'; url = 'https://maven.shedaniel.me/' }
+        maven { name = 'TerraformersMC'; url = 'https://maven.terraformersmc.com/releases/' }
     }
 }
 
-jar {
-    manifest {
-        attributes([
-                'Specification-Title'   : mod_name,
-                'Specification-Vendor'  : mod_author,
-                'Specification-Version' : version,
-                'Implementation-Title'  : project.name,
-                'Implementation-Version': version,
-                'Implementation-Vendor' : mod_author,
-                'Built-On-Minecraft'    : minecraft_version
-        ])
+// ---- targets/<区间>/overlay ----
+// 主干实现放在 common / fabric / 加载器模块里；只有某区间的写法确实不同时，
+// 才在 targets/<区间>/overlay/<模块>/{java,resources} 放一份同路径文件覆盖它。
+def overlayRoot = findProperty('target_overlay') ? new File(rootProject.projectDir, findProperty('target_overlay')) : null
+def overlayJava = overlayRoot ? new File(overlayRoot, "${project.name}/java") : null
+def overlayResources = overlayRoot ? new File(overlayRoot, "${project.name}/resources") : null
+def skipped = (findProperty('target_skip') ?: '').split(',').collect { it.trim() }.findAll { it }
+
+// AT / access widener 由加载器按路径读取，配置阶段就得指向真实文件 ⇒ 先看 overlay 里有没有同名文件。
+ext.pickResource = { String relative ->
+    def inOverlay = overlayResources ? new File(overlayResources, relative) : null
+    if (inOverlay != null && inOverlay.exists()) {
+        return inOverlay
     }
+    return file("src/main/resources/${relative}")
+}
+
+if (overlayJava != null && overlayJava.directory) {
+    def mergedJava = layout.buildDirectory.dir("merged/${project.name}/java")
+    def mergeJava = tasks.register("mergeTargetJava${project.name.capitalize()}", Sync) {
+        // overlay 先入，主干的同名文件按 EXCLUDE 跳过 ⇒ overlay 生效。
+        from(overlayJava)
+        from('src/main/java')
+        skipped.each { exclude it }
+        into mergedJava
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+    sourceSets.main.java.setSrcDirs([mergedJava])
+    tasks.named('compileJava') { dependsOn mergeJava }
+    tasks.named('processResources') { dependsOn mergeJava }
+    // sourcesJar 也读同一个合并目录，缺这条会报「隐式依赖」校验错误。
+    tasks.matching { it.name == 'sourcesJar' }.configureEach { dependsOn mergeJava }
+} else if (!skipped.isEmpty()) {
+    sourceSets.main.java.exclude { detail -> skipped.any { detail.path == it || detail.path.startsWith(it + '/') } }
+}
+
+if (overlayResources != null && overlayResources.directory) {
+    // overlay 目录排在前面，processResources 的 EXCLUDE 会让主干的同名文件让位。
+    sourceSets.main.resources.srcDirs = [overlayResources, file('src/main/resources')]
 }
 
 processResources {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     // Forge（FG6）模块默认按**平台编码**写过滤后的文件：本机是 GBK，而游戏按 UTF-8 读 mods.toml
     // ⇒ 描述里的中文变乱码（Fabric 侧由 Loom 自己设成 UTF-8，所以只有 Forge 端中招）。
     filteringCharset = 'UTF-8'
@@ -89,6 +139,32 @@ processResources {
     }
 
     inputs.properties(expandProps)
+}
+
+// 打 jar 时把仓库根的 LICENSE 原样带进去（rootProject 是 targets/<区间>，往上两级才是主干目录）。
+def branchRoot = rootProject.projectDir.parentFile?.parentFile
+def licenseFile = branchRoot != null ? new File(branchRoot, 'LICENSE') : rootProject.file('LICENSE')
+
+tasks.withType(Jar).configureEach {
+    if (licenseFile.exists()) {
+        from(licenseFile) {
+            rename { "${it}_${mod_name}" }
+        }
+    }
+}
+
+jar {
+    manifest {
+        attributes([
+                'Specification-Title'   : mod_name,
+                'Specification-Vendor'  : mod_author,
+                'Specification-Version' : version,
+                'Implementation-Title'  : project.name,
+                'Implementation-Version': version,
+                'Implementation-Vendor' : mod_author,
+                'Built-On-Minecraft'    : minecraft_version
+        ])
+    }
 }
 
 publishing {

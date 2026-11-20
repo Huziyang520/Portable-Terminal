@@ -1,0 +1,47 @@
+plugins {
+    id 'multiloader-loader'
+    id 'net.neoforged.moddev'
+}
+
+dependencies {
+    compileOnly("${cloth_config_neoforge}") { transitive = false }
+    // 可选：JEI 避让。只编译期引用仓库内自带的 API 工件，不打包、不设必装依赖。
+    compileOnly files("../common/libs/${jei_api_jar}")
+}
+
+neoForge {
+    version = neoforge_version
+    accessTransformers.from(project(':common').pickResource('META-INF/accesstransformer.cfg').absolutePath)
+    runs {
+        configureEach {
+            systemProperty('neoforge.enabledGameTestNamespaces', mod_id)
+            ideName = "NeoForge ${it.name.capitalize()} (${project.path})"
+        }
+        client {
+            client()
+            gameDirectory = this.mkdir(this.file('runs/client'))
+        }
+        server {
+            server()
+            gameDirectory = this.mkdir(this.file('runs/server'))
+        }
+    }
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+// 20.x 的 net.neoforged:neoforge 经 net.minecraftforge:unsafe 传递依赖 log4j 的动态版本（2.11.+）。
+// 动态版本要先取模块版本清单，本机拿不到（源都指向不可达的 maven.neoforged.net）⇒ 钉到缓存里已有的版本。
+def log4jPin = findProperty('log4j_pin')
+if (log4jPin != null) {
+    configurations.configureEach {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'org.apache.logging.log4j' && details.requested.version.endsWith('+')) {
+                details.useVersion log4jPin.toString()
+            }
+        }
+    }
+}

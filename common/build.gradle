@@ -1,29 +1,43 @@
 plugins {
     id 'multiloader-common'
-    id 'fabric-loom'
+}
+
+// 区间决定 common 的编译后端：1.20.1 走 Loom（Forge/Fabric 都用这套映射），1.20.2+ 走 ModDevGradle 的 NeoForm。
+def backend = findProperty('common_backend') ?: 'moddev'
+
+if (backend == 'loom') {
+    apply plugin: 'fabric-loom'
+
+    loom {
+        // access widener 也可能来自 overlay（区间之间条目不同）。
+        accessWidenerPath = pickResource("${mod_id}.accesswidener")
+    }
+} else {
+    apply plugin: 'net.neoforged.moddev'
+
+    neoForge {
+        neoFormVersion = neo_form_version
+        accessTransformers.from(pickResource('META-INF/accesstransformer.cfg').absolutePath)
+    }
 }
 
 repositories {
-    // Optional integrations: never bundled, only compiled against, and guarded at runtime.
-    maven { name = 'Shedaniel'; url = 'https://maven.shedaniel.me/' }
-    maven { name = 'TerraformersMC'; url = 'https://maven.terraformersmc.com/releases/' }
-}
-
-// common 自己也要吃 access widener：MenuType 的构造器是 private，AT 只对 Forge 侧生效，
-// Loom 侧必须用 access widener 才能在本模块编译期打开它。
-loom {
-    accessWidenerPath = file("src/main/resources/${mod_id}.accesswidener")
+    // 可选前置只编译期引用，运行时缺失必须不报错。
+    maven { url = 'https://maven.shedaniel.me/' }
+    maven { url = 'https://maven.terraformersmc.com/releases/' }
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:${minecraft_version}"
-    mappings loom.officialMojangMappings()
-    // Optional: config screen. Cloth Config is not a required dependency.
-    modCompileOnly('me.shedaniel.cloth:cloth-config-fabric:11.1.136') { transitive = false }
-	// Optional: JEI avoidance. JEI is not a required dependency and is never bundled.
-	// Optional: JEI avoidance. The API jar is vendored under common/libs and is only
-	// compiled against (never bundled, never required at runtime).
-	compileOnly files('libs/jei-1.20.1-common-api-15.62.0.219.jar')
+    // 可选：配置界面。Cloth Config 不是必需依赖。
+    if (backend == 'loom') {
+        minecraft "com.mojang:minecraft:${minecraft_version}"
+        mappings loom.officialMojangMappings()
+        modCompileOnly("${cloth_config_common}") { transitive = false }
+    } else {
+        compileOnly("${cloth_config_common}") { transitive = false }
+    }
+    // 可选：JEI 避让。只编译期引用仓库内自带的 API 工件，不打包、不设必装依赖。
+    compileOnly files("libs/${jei_api_jar}")
 }
 
 configurations {
@@ -39,5 +53,20 @@ configurations {
 
 artifacts {
     commonJava sourceSets.main.java.sourceDirectories.singleFile
-    commonResources sourceSets.main.resources.sourceDirectories.singleFile
+    // 资源可能有多个源根（overlay 在前、主干在后），逐个登记成工件。
+    sourceSets.main.resources.srcDirs.each { commonResources it }
+}
+
+// 20.x 的 net.neoforged:neoforge 会经 net.minecraftforge:unsafe 传递依赖 log4j 的动态版本（2.11.+）。
+// 动态版本要先取模块版本清单，而本机对 maven.neoforged.net 不可达、拉清单会一直挂住；
+// 这里直接钉到缓存里已有的具体版本，解析结果与联网一致且不再依赖网络。
+def log4jPin = findProperty('log4j_pin')
+if (log4jPin != null) {
+    configurations.configureEach {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'org.apache.logging.log4j' && details.requested.version.endsWith('+')) {
+                details.useVersion log4jPin.toString()
+            }
+        }
+    }
 }

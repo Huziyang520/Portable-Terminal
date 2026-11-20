@@ -31,5 +31,15 @@ tasks.named('sourcesJar', Jar) {
     dependsOn(configurations.commonJava)
     from(configurations.commonJava)
     dependsOn(configurations.commonResources)
+    // common 的资源源根可能是 [overlay, 主干] 两个，同名文件按先入为准。
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from(configurations.commonResources)
+}
+
+// common 的源目录可能是 overlay 合并出来的产物，直接依赖它的生成任务，避免隐式依赖出错。
+def commonMerges = project(':common').tasks.matching { it.name.startsWith('mergeTarget') }
+tasks.configureEach { task ->
+    if (task.name in ['compileJava', 'processResources', 'sourcesJar']) {
+        task.dependsOn commonMerges
+    }
 }

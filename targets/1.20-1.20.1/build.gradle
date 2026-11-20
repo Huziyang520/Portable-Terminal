@@ -1,0 +1,5 @@
+plugins {
+    // Loom 1.8 与 FG6 都只支持 Gradle 8.x，这是本条主干能用的最高档（整条主干共用一个 wrapper）。
+    id 'fabric-loom' version '1.8-SNAPSHOT' apply false
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)' apply false
+}
