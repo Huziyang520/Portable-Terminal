@@ -3,28 +3,15 @@ plugins {
     id 'net.neoforged.moddev'
 }
 
-repositories {
-    // Optional integration, compile only. The module compiles the common sources, so it needs the
-    // Cloth Config API on its own compile classpath.
-    maven { url = 'https://maven.shedaniel.me/' }
-}
-
 dependencies {
-    compileOnly('me.shedaniel.cloth:cloth-config-neoforge:15.0.140') { transitive = false }
-    // JEI（可选前置）：只编译期引用仓库内自带的 API 工件；不打包、不设必装依赖。
-    compileOnly files('../common/libs/jei-1.21.1-common-api-19.64.0.453.jar')
+    compileOnly("${cloth_config_neoforge}") { transitive = false }
+    // 可选：JEI 避让。只编译期引用仓库内自带的 API 工件，不打包、不设必装依赖。
+    compileOnly files("../common/libs/${jei_api_jar}")
 }
-
-// 本分支的 Gradle 跑在 Java 21/17 上，而 CurseForgeGradle 1.3.33 要求 JVM 25 ⇒ 不能作为构建插件加载。
-// 发布统一走 文档/上传脚本 的 gradle init 脚本（cfUpload / mrUpload），本文件不再注册 curseforge 任务。
 
 neoForge {
     version = neoforge_version
-    // Automatically enable neoforge AccessTransformers if the file exists
-    def at = project(':common').file('src/main/resources/META-INF/accesstransformer.cfg')
-    if (at.exists()) {
-        accessTransformers.from(at.absolutePath)
-    }
+    accessTransformers.from(project(':common').pickResource('META-INF/accesstransformer.cfg').absolutePath)
     runs {
         configureEach {
             systemProperty('neoforge.enabledGameTestNamespaces', mod_id)
