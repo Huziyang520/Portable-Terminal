@@ -17,7 +17,7 @@ public final class ConfigSchema {
 
 	public static final boolean DEFAULT_MASTER_SWITCH = true;
 	public static final InsertOrder DEFAULT_INSERT_ORDER = InsertOrder.NEAREST;
-	public static final int DEFAULT_SCAN_RADIUS = 8;
+	public static final int DEFAULT_SCAN_RADIUS = 16;
 	public static final int MAX_SCAN_RADIUS = 128;
 	public static final int MIN_SCAN_RADIUS = 0;
 	public static final int DEFAULT_TERMINAL_ROWS = PortableTerminalLayout.DEFAULT_ROWS;
