@@ -210,7 +210,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		this.scrollbarDirty = true;
 		ModConfig.setRows(next);
 		this.menu.applyViewRows(next);
-		this.guiHeight = this.imageHeight;
+		this.guiHeight = PortableTerminalLayout.imageHeight(this.rows);
+		this.topPos = (this.height - this.guiHeight) / 2;
 		this.inventoryLabelY = PortableTerminalLayout.invTop(next) - 11;
 		this.rebuildWidgets();
 	}
@@ -347,12 +348,10 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		if (cachedMaxScroll > 0) {
 			thumbY = sy + 1 + (inner - thumbH) * cachedScrollOffset / cachedMaxScroll;
 		}
-		int thumbColor = cachedMaxScroll > 0 ? COL_SCROLL_THUMB : 0xFF555555;
-		gfx.fill(sx + 1, thumbY, sx + SCROLLBAR_WIDTH - 1, thumbY + thumbH, thumbColor);
-		if (cachedMaxScroll > 0) {
-			gfx.fill(sx + SCROLLBAR_WIDTH - 2, thumbY, sx + SCROLLBAR_WIDTH - 1, thumbY + thumbH, COL_SCROLL_THUMB2);
-			gfx.fill(sx + 1, thumbY + thumbH - 1, sx + SCROLLBAR_WIDTH - 1, thumbY + thumbH, COL_SCROLL_THUMB2);
-		}
+		// 滑块恒为浅灰 + 右下描边：贴图里的轨道是 43 的凹槽，滑块要能从上面对比出来。
+		gfx.fill(sx + 1, thumbY, sx + SCROLLBAR_WIDTH - 1, thumbY + thumbH, COL_SCROLL_THUMB);
+		gfx.fill(sx + SCROLLBAR_WIDTH - 2, thumbY, sx + SCROLLBAR_WIDTH - 1, thumbY + thumbH, COL_SCROLL_THUMB2);
+		gfx.fill(sx + 1, thumbY + thumbH - 1, sx + SCROLLBAR_WIDTH - 1, thumbY + thumbH, COL_SCROLL_THUMB2);
 	}
 
 	@Override
