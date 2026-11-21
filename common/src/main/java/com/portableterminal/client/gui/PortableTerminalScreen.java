@@ -225,6 +225,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private void onSearchChanged(String value) {
 		this.lastSearchText = value;
 		this.menu.applySearchFilter(value);
+		// 搜索结果的行数变了，滑块长度要跟着重算。
+		this.scrollbarDirty = true;
 	}
 
 	@Override
@@ -431,14 +433,14 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			this.setFocused(null);
 		}
 
-		if (isInScrollbar(mouseX, mouseY) && button == 0) {
+		if (isInScrollbar(mouseX, mouseY) && button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_MIDDLE) {
 			draggingScrollbar = true;
 			scrollToMouse(mouseY);
 			return true;
 		}
 
 		int hoveredSlot = getHoveredTerminalSlot((int) mouseX, (int) mouseY);
-		if (hoveredSlot >= 0 && button == 0) {
+		if (hoveredSlot >= 0 && button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_MIDDLE) {
 			// 单击路径必须保持原样：一次点击只发一次 TerminalSlotClickPacket。
 			// 拖拽只是「按下之后再滑到别的格子」时附加的行为（见 mouseDragged），
 			// 所以这里绝不能提前把 draggingQuickMove 置真，否则释放事件和单点语义都会被改掉。
@@ -456,7 +458,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	/** 对某个终端槽位执行一次点击动作（与单点完全相同；拖拽经过其它槽位时重复调用）。 */
 	private void clickTerminalSlot(int slotIndex, int button, boolean hasShift) {
 		ItemStack carried = this.menu.getCarried();
-		if (button != 2 && !carried.isEmpty()) {
+		if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_MIDDLE && !carried.isEmpty()) {
 			ClientSender.sendToServer(TerminalSlotClickPacket.deposit());
 			return;
 		}
@@ -467,7 +469,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		}
 
 		Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(shown.getItem());
-		ClientSender.sendToServer(new TerminalSlotClickPacket(itemId, button, hasShift));
+		ClientSender.sendToServer(new TerminalSlotClickPacket(itemId, wireButton(button), hasShift));
 	}
 
 	/** 拖拽经过的新槽位触发一次点击动作；同一格只触发一次。 */
@@ -487,7 +489,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			return true;
 		}
 		// 拖拽只在「已按下某格 + 指针进入另一格」时升级，单击因此保持原有的单发语义。
-		if (pressSlot >= 0 && !draggingQuickMove) {
+		if (pressSlot >= 0 && pressShift && !draggingQuickMove) {
 			int slotIndex = getHoveredTerminalSlot((int) event.x(), (int) event.y());
 			if (slotIndex >= 0 && slotIndex != pressSlot) {
 				draggingQuickMove = true;
@@ -540,19 +542,23 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			&& mouseY >= y && mouseY < y + PortableTerminalLayout.scrollbarHeight(this.rows);
 	}
 
+	/**
+	 * 终端格命中的唯一依据是槽位自己的矩形：槽位坐标由布局给出，屏幕上再偏移面板原点。
+	 * 不再按常量重算网格，避免布局与命中区各算一套。
+	 */
 	private int getHoveredTerminalSlot(int mouseX, int mouseY) {
-		int termX = this.leftPos + TERM_LEFT;
-		int termY = this.topPos + TERM_TOP;
-		if (mouseX < termX || mouseX >= termX + COLS * SLOT_SIZE
-			|| mouseY < termY || mouseY >= termY + this.rows * SLOT_SIZE) {
-			return -1;
+		List<PortableTerminalMenu.TerminalSlot> slots = this.menu.getTerminalSlots();
+		for (int i = 0; i < slots.size(); i++) {
+			PortableTerminalMenu.TerminalSlot slot = slots.get(i);
+			if (slot.x < 0 || slot.y < 0) continue;
+			int sx = this.leftPos + slot.x;
+			int sy = this.topPos + slot.y;
+			int size = PortableTerminalLayout.SLOT_SIZE;
+			if (mouseX >= sx && mouseX < sx + size && mouseY >= sy && mouseY < sy + size) {
+				return i;
+			}
 		}
-		int col = (mouseX - termX) / SLOT_SIZE;
-		int row = (mouseY - termY) / SLOT_SIZE;
-		if (col < 0 || col >= COLS || row < 0 || row >= this.rows) {
-			return -1;
-		}
-		return row * COLS + col;
+		return -1;
 	}
 
 	@Override
@@ -644,5 +650,15 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		protected void updateWidgetNarration(NarrationElementOutput out) {
 			// 方块按钮，无需朗读文本
 		}
+	}
+
+	/**
+	 * 协议里 0=左键（整组）、1=右键（半组）、其余按键原样。
+	 * 输入层给的键码按版本不同（高版本用 SDL 编号），这里统一成协议值再发包。
+	 */
+	private static int wireButton(int button) {
+		if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return 0;
+		if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT) return 1;
+		return button;
 	}
 }

@@ -49,13 +49,8 @@ public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shi
 		return DEPOSIT_MARKER.equals(this.itemId);
 	}
 
-	/** Server side handling; invoked by the loader's packet bootstrap. */
-	private static final org.slf4j.Logger DIAG = org.slf4j.LoggerFactory.getLogger("PT-DIAG");
-
 	public static void handleServer(ServerPlayer player, TerminalSlotClickPacket packet) {
 		AbstractContainerMenu menu = player.containerMenu;
-		DIAG.info("[PT-DIAG] recv id={} button={} shift={} deposit={} menu={}",
-			packet.itemId(), packet.button(), packet.shift(), packet.isDeposit(), menu.getClass().getSimpleName());
 		if (!(menu instanceof PortableTerminalMenu psm)) return;
 
 		ItemStack carried = menu.getCarried();
@@ -78,10 +73,8 @@ public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shi
 			}
 		}
 		if (template == null || template.isEmpty()) {
-			DIAG.info("[PT-DIAG] template NOT found, aggregated={}", psm.getAggregatedItems().size());
 			return;
 		}
-		DIAG.info("[PT-DIAG] template ok count={} containers={}", template.getCount(), psm.getContainers().size());
 
 		int count;
 		if (packet.shift()) {
@@ -89,7 +82,7 @@ public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shi
 		} else {
 			count = switch (packet.button()) {
 				case 0 -> Math.min(template.getMaxStackSize(), 64);
-				case 1 -> Math.min(32, (template.getCount() + 1) / 2);
+				case 1 -> Math.min(template.getMaxStackSize(), (template.getCount() + 1) / 2);
 				default -> 1;
 			};
 		}
@@ -106,7 +99,6 @@ public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shi
 		}
 
 		ItemStack extracted = psm.extractFromContainers(template, count);
-		DIAG.info("[PT-DIAG] extracted={} wanted={}", extracted.getCount(), count);
 		if (!extracted.isEmpty()) {
 			if (packet.shift()) {
 				ItemStack leftover = extracted.copy();

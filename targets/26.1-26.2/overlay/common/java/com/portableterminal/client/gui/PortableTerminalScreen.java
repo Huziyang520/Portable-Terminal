@@ -222,6 +222,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private void onSearchChanged(String value) {
 		this.lastSearchText = value;
 		this.menu.applySearchFilter(value);
+		// 搜索结果的行数变了，滑块长度要跟着重算。
+		this.scrollbarDirty = true;
 	}
 
 	@Override
@@ -424,14 +426,14 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			this.setFocused(null);
 		}
 
-		if (isInScrollbar(mouseX, mouseY) && button == 0) {
+		if (isInScrollbar(mouseX, mouseY) && button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
 			draggingScrollbar = true;
 			scrollToMouse(mouseY);
 			return true;
 		}
 
 		int hoveredSlot = getHoveredTerminalSlot((int) mouseX, (int) mouseY);
-		if (hoveredSlot >= 0 && button == 0 && hasShift) {
+		if (hoveredSlot >= 0 && button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && hasShift) {
 			// shift + 左键：进入拖拽快速转移模式（每滑过一格转移一组）
 			draggingQuickMove = true;
 			lastQuickMoveSlot = -1;
@@ -441,7 +443,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 		if (hoveredSlot >= 0) {
 			ItemStack carried = this.menu.getCarried();
-			if (button != 2 && !carried.isEmpty()) {
+			if (button != com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_MIDDLE && !carried.isEmpty()) {
 				ClientSender.sendToServer(TerminalSlotClickPacket.deposit());
 				return true;
 			}
@@ -452,7 +454,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			}
 
 			Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(shown.getItem());
-			ClientSender.sendToServer(new TerminalSlotClickPacket(itemId, button, hasShift));
+			ClientSender.sendToServer(new TerminalSlotClickPacket(itemId, wireButton(button), hasShift));
 			return true;
 		}
 
@@ -631,5 +633,15 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		protected void updateWidgetNarration(NarrationElementOutput out) {
 			// 方块按钮，无需朗读文本
 		}
+	}
+
+	/**
+	 * 协议里 0=左键（整组）、1=右键（半组）、其余按键原样。
+	 * 输入层给的键码按版本不同（高版本用 SDL 编号），这里统一成协议值再发包。
+	 */
+	private static int wireButton(int button) {
+		if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) return 0;
+		if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT) return 1;
+		return button;
 	}
 }
