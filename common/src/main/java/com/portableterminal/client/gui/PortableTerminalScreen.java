@@ -264,6 +264,15 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	// ==================== 背景：三段 1:1 分片的面板贴图 ====================
 
 	@Override
+	public void render(GuiGraphics gfx, int mouseX, int mouseY, float partialTick) {
+		super.render(gfx, mouseX, mouseY, partialTick);
+		// 1.21.x 的 AbstractContainerScreen.render 不再调用 renderTooltip，改为每个具体界面
+		// 在 render 末尾自己调一次（原版 ContainerScreen / CreativeModeInventoryScreen 都这么写）。
+		// 少这一步，悬停在终端槽位的物品上不会出现提示框。
+		this.renderTooltip(gfx, mouseX, mouseY);
+	}
+
+	@Override
 	protected void renderBg(GuiGraphics gfx, float partialTick, int mouseX, int mouseY) {
 		this.lastMouseX = mouseX;
 		this.lastMouseY = mouseY;
