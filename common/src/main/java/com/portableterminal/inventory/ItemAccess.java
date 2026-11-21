@@ -77,9 +77,12 @@ public interface ItemAccess {
 	static ItemStack extractMatching(ItemAccess access, ItemStack template, int count) {
 		ItemStack extracted = ItemStack.EMPTY;
 		int remaining = count;
+		int matches = 0;
+		int size = access.size();
 		for (int i = 0; i < access.size() && remaining > 0; i++) {
 			ItemStack slotStack = access.get(i);
 			if (slotStack.isEmpty() || !ItemStack.isSameItemSameComponents(slotStack, template)) continue;
+			matches++;
 			ItemStack taken = access.extract(i, Math.min(remaining, slotStack.getCount()));
 			if (taken.isEmpty()) continue;
 			if (extracted.isEmpty()) {
@@ -89,6 +92,9 @@ public interface ItemAccess {
 			}
 			remaining -= taken.getCount();
 		}
+		org.slf4j.LoggerFactory.getLogger("PT-DIAG").info("[PT-DIAG] extractMatching size={} matches={} taken={} template={}x{}",
+			size, matches, extracted.getCount(),
+			net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(template.getItem()), template.getCount());
 		return extracted;
 	}
 }
