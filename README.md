@@ -1,31 +1,53 @@
-# Portable Terminal
+# 📦 Portable Terminal
 
-A lightweight portable terminal that lets you browse, search and move items across every container
-near you, without opening them one by one.
+A lightweight portable terminal: browse, search and move items across every container around you
+without opening them one by one.
 
-## What it does
+---
 
-- Scans the containers around you and shows everything they hold in one list.
-- Searches by item name or by item ID, including tag lookups such as `#minecraft:logs`.
-- Sorts by name, count, ID or mod, in either direction.
-- Lets you pull items out with a click, or push them back with shift-click.
-- Remembers your sort preference between sessions.
+## ✨ What it does
 
-## How to use
+- 🔭 **One list for everything** — scans the containers around you and shows their contents together.
+- 🔍 **Search** — by item name, by item ID, or by tag (`#minecraft:logs`).
+- ↕️ **Sorting** — by name, count, ID or mod, ascending or descending.
+- 🖱️ **Moving items** — click to take a stack, right-click for half (up to 32), shift-click to fill
+  your inventory; shift-click your own items to store them back.
+- 💾 **Remembers** — your sort order and window size are kept between sessions.
 
-1. Press <code>`</code> (grave accent) to open the terminal. You can rebind it under
+## 🎮 How to use
+
+1. Press <code>`</code> (grave accent) to open the terminal; rebind it under
    *Options → Controls → Key Binds → Portable Terminal*.
-2. Type in the search box at the top of the terminal to narrow the list.
-3. Click the sort buttons on the left of the terminal to change the ordering.
-4. Drag the scrollbar, or scroll with the mouse wheel over the grid, to reach further items.
-5. Click an item to take a stack out of the nearby containers; shift-click to take as many as fit
-   into your inventory. Shift-click a stack in your own inventory to put it back into the
-   containers.
+2. Type in the search box at the top to narrow the list.
+3. Use the buttons on the left to change the sort order or the number of visible rows.
+4. Drag the scrollbar, or scroll over the grid, to reach further items.
+5. Click an item to take it out of the nearby containers; shift-click to take as many as fit in
+   your inventory. Shift-click a stack in your own inventory to put it back.
 
-## Server rules
+## ⚙️ Settings
 
-Server administrators can control the mod with block tags. When one of the tags below exists and
-contains at least one block, the matching rule becomes active:
+Open the config screen from the mod list. Every setting lives in one place:
+
+| Setting | Meaning |
+| --- | --- |
+| 🎚️ Master switch | Turns the terminal off completely |
+| 🔭 Scan radius | How far it looks for containers, `0`–`128` (default `16`) |
+| 📐 Rows | How many item rows the terminal shows |
+| 🚫 Ignored blocks | Block IDs the terminal skips, for example `minecraft:furnace` |
+| 📥 Insert order | Which container receives items first: nearest, farthest, or by coordinates |
+
+## 📥 Requirements
+
+| Loader | Needed |
+| --- | --- |
+| Fabric | Fabric API, Forge Config API Port |
+| NeoForge | — |
+| Forge | Neo Configuration Screen Port |
+
+## 🛡️ Server control
+
+Server administrators can control the mod with block tags. A rule becomes active when the tag
+exists and contains at least one block:
 
 | Tag | Effect |
 | --- | --- |
@@ -35,18 +57,7 @@ contains at least one block, the matching rule becomes active:
 | `portableterminal:portable_terminal_disable_extract` | Blocks taking items out |
 | `portableterminal:portable_terminal_only_singleplayer` | Makes the terminal singleplayer-only |
 
-## Client config
-
-The client keeps its settings in `config/portable_terminal_client.json`:
-
-| Key | Meaning |
-| --- | --- |
-| `scanRadius` | How far the terminal looks for containers, from `0` to `16` |
-| `masterSwitch` | Turns the terminal off completely when `false` |
-| `blacklistBlockIds` | Block IDs that the terminal ignores, for example `minecraft:furnace` |
-| `sortConfig` | The sort order last chosen in the terminal |
-
-## License and credits
+## 📄 License and credits
 
 Released under the GNU Affero General Public License v3.0 (AGPL-3.0); see `LICENSE`.
 
@@ -56,30 +67,51 @@ distributed under the MIT License. See `LICENSE` for the full notice.
 
 ---
 
-# 随身终端
+# 📦 随身终端
 
 一个轻量的随身终端：不用逐个打开箱子，就能浏览、搜索并搬运你附近所有容器里的物品。
 
-## 功能
+## ✨ 功能
 
-- 扫描你周围的容器，把里面的物品汇总成一份列表；
-- 支持按物品名称或物品 ID 搜索，也支持 `#minecraft:logs` 这样的标签搜索；
-- 支持按名称、数量、ID、模组排序，可升可降；
-- 点击取出物品，Shift 点击批量取满背包；
-- 记住你上次选择的排序方式。
+- 🔭 **汇总成一份列表** —— 扫描你周围的容器，把它们装的东西合在一起显示。
+- 🔍 **搜索** —— 按物品名称、物品 ID，或 `#minecraft:logs` 这样的标签查找。
+- ↕️ **排序** —— 按名称、数量、ID 或模组，可升可降。
+- 🖱️ **搬运物品** —— 左键取一组，右键取一半（最多 32 个），Shift 点击取满背包；
+  对自己背包里的物品 Shift 点击即可存回附近容器。
+- 💾 **记住习惯** —— 排序方式与窗口行数会保留到下次。
 
-## 使用方法
+## 🎮 使用方法
 
-1. 按 <code>`</code>（反引号）打开终端；可在 *选项 → 控制 → 按键绑定 → 随身终端* 中改键；
-2. 在终端顶部的搜索框输入关键词筛选列表；
-3. 点击终端左侧的排序按钮切换排序方式；
-4. 拖动滚动条，或把鼠标滚轮放在物品区上滚动，查看更后面的物品；
-5. 点击物品从附近容器中取出一组，Shift 点击则尽可能多地取进背包；对背包里的物品 Shift
-   点击，可把它存回附近的容器。
+1. 按 <code>`</code>（反引号）打开终端；可在 *选项 → 控制 → 按键绑定 → 随身终端* 中改键。
+2. 在终端顶部的搜索框输入关键词筛选列表。
+3. 用左侧按钮切换排序方式或显示行数。
+4. 拖动滚动条，或把滚轮放在物品区上滚动，查看更后面的物品。
+5. 点击物品即可从附近容器中取出；Shift 点击尽可能多地取进背包；
+   对背包里的物品 Shift 点击可存回容器。
 
-## 服务器控制
+## ⚙️ 设置
 
-服务器管理员可以用方块标签控制本模组。当下列某个标签存在且至少包含一个方块时，对应规则生效：
+在模组列表里打开配置界面，全部设置都在一处：
+
+| 设置 | 含义 |
+| --- | --- |
+| 🎚️ 总开关 | 关闭后终端完全不可用 |
+| 🔭 扫描半径 | 搜索容器的范围，`0`–`128`（默认 `16`） |
+| 📐 行数 | 终端一次显示几行物品 |
+| 🚫 忽略的方块 | 终端跳过的方块 ID，例如 `minecraft:furnace` |
+| 📥 存入顺序 | 存入时先放进哪个容器：由近到远、由远到近、按坐标 |
+
+## 📥 前置
+
+| 加载器 | 需要安装 |
+| --- | --- |
+| Fabric | Fabric API、Forge Config API Port |
+| NeoForge | 无 |
+| Forge | Neo Configuration Screen Port |
+
+## 🛡️ 服务器控制
+
+服务器管理员可以用方块标签控制本模组。当某个标签存在且至少包含一个方块时，对应规则生效：
 
 | 标签 | 作用 |
 | --- | --- |
@@ -89,18 +121,7 @@ distributed under the MIT License. See `LICENSE` for the full notice.
 | `portableterminal:portable_terminal_disable_extract` | 禁止取出物品 |
 | `portableterminal:portable_terminal_only_singleplayer` | 仅在单人游戏可用 |
 
-## 客户端配置
-
-客户端配置保存在 `config/portable_terminal_client.json`：
-
-| 键 | 含义 |
-| --- | --- |
-| `scanRadius` | 终端搜索容器的范围，取值 `0` 到 `16` |
-| `masterSwitch` | 为 `false` 时完全关闭终端 |
-| `blacklistBlockIds` | 终端忽略的方块 ID，例如 `minecraft:furnace` |
-| `sortConfig` | 上次在终端中选择的排序方式 |
-
-## 许可证与致谢
+## 📄 许可证与致谢
 
 本项目以 GNU Affero 通用公共许可证第 3 版（AGPL-3.0）发布，详见 `LICENSE`。
 
