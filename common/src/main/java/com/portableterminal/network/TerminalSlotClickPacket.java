@@ -82,7 +82,7 @@ public record TerminalSlotClickPacket(Identifier itemId, int button, boolean shi
 		} else {
 			count = switch (packet.button()) {
 				case 0 -> Math.min(template.getMaxStackSize(), 64);
-				case 1 -> Math.min(template.getMaxStackSize(), (template.getCount() + 1) / 2);
+				case 1 -> Math.min(32, (template.getCount() + 1) / 2);
 				default -> 1;
 			};
 		}
