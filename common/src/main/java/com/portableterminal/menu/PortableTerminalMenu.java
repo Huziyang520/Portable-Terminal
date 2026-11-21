@@ -336,7 +336,6 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 			BlockEntity be = level.getBlockEntity(pos);
 			ItemAccess access = accessAt(be);
 			if (access != null) {
-				if (i < containers.size()) containers.set(i, access);
 				return true;
 			}
 		}

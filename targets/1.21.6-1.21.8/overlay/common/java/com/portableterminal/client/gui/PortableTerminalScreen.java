@@ -214,6 +214,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private void onSearchChanged(String value) {
 		this.lastSearchText = value;
 		this.menu.applySearchFilter(value);
+		// 搜索结果的行数变了，滑块长度要跟着重算。
+		this.scrollbarDirty = true;
 	}
 
 	@Override
