@@ -14,6 +14,8 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
+import net.neoforged.neoforge.client.gui.ConfigurationScreen;
+import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.neoforged.neoforge.registries.RegisterEvent;
@@ -28,6 +30,10 @@ public class PortableTerminalNeoForge {
 	public PortableTerminalNeoForge(IEventBus modBus, ModContainer container) {
 		// 设置项交给 NeoForge 自己的配置系统：模组列表的「配置」按钮与界面都由它提供。
 		container.registerConfig(ModConfig.Type.CLIENT, PortableTerminalSpec.SPEC, "portableterminal-client.toml");
+		// 模组列表的「配置」按钮只在容器登记了工厂时才点亮（21.1 起不再自动接手）。
+		if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
+			container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
+		}
 		modBus.addListener((ModConfigEvent.Loading event) -> PortableTerminalSpec.applyAll());
 		modBus.addListener((ModConfigEvent.Reloading event) -> PortableTerminalSpec.applyAll());
 
