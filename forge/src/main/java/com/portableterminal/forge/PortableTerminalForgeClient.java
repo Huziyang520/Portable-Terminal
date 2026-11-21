@@ -36,7 +36,8 @@ public class PortableTerminalForgeClient {
 			// 配置界面由前置 Neo Configuration Screen Port 提供，这一行同时点亮模组列表的「配置」按钮。
 			ConfigScreenRegistration.register(PortableTerminalMod.MOD_ID);
 			// Forge 的 spec 没有「新元素工厂」，列表页的新增按钮由 NCP 这个注册点提供。
-			ListElements.register(PortableTerminalMod.MOD_ID, ConfigSchema.KEY_BLACKLIST, () -> "minecraft:");
+			ListElements.register(PortableTerminalMod.MOD_ID,
+				ConfigSchema.SECTION_GENERAL + "." + ConfigSchema.KEY_BLACKLIST, () -> "minecraft:");
 		});
 	}
 
@@ -49,11 +50,24 @@ public class PortableTerminalForgeClient {
 	@Mod.EventBusSubscriber(modid = PortableTerminalMod.MOD_ID, value = Dist.CLIENT)
 	public static class ClientEvents {
 
+		/** 上一次 tick 是否停在配置界面上（用来判断「刚关掉配置界面」）。 */
+		private static boolean inConfigScreen;
+
 		@SubscribeEvent
 		public static void onClientTick(TickEvent.ClientTickEvent event) {
-			if (event.phase == TickEvent.Phase.END) {
-				PortableTerminalClient.tick(Minecraft.getInstance());
+			if (event.phase != TickEvent.Phase.END) {
+				return;
 			}
+			Minecraft mc = Minecraft.getInstance();
+			PortableTerminalClient.tick(mc);
+
+			// 配置界面用的前置只把值写盘，不发 ModConfigEvent，快照得自己刷一次。
+			boolean now = mc.screen != null
+				&& mc.screen.getClass().getName().startsWith("net.neoforged.neoforge.client.gui.ConfigurationScreen");
+			if (inConfigScreen && !now) {
+				ForgeConfig.applyAll();
+			}
+			inConfigScreen = now;
 		}
 	}
 }
