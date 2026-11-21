@@ -37,7 +37,7 @@ public class PortableTerminalForgeClient {
 			ConfigScreenRegistration.register(PortableTerminalMod.MOD_ID);
 			// Forge 的 spec 没有「新元素工厂」，列表页的新增按钮由 NCP 这个注册点提供。
 			ListElements.register(PortableTerminalMod.MOD_ID,
-				ConfigSchema.SECTION_GENERAL + "." + ConfigSchema.KEY_BLACKLIST, () -> "minecraft:");
+				ConfigSchema.SECTION_GENERAL + "." + ConfigSchema.KEY_BLACKLIST, () -> "");
 		});
 	}
 
