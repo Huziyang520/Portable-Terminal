@@ -8,7 +8,7 @@ without opening them one by one.
 ## ✨ What it does
 
 - 🔭 **One list for everything** — scans the containers around you and shows their contents together.
-- 🔍 **Search** — by item name, by item ID, or by tag (`#minecraft:logs`).
+- 🔍 **Search** — by item name, ID, mod, tag or tooltip text, with prefixes (see below).
 - ↕️ **Sorting** — by name, count, ID or mod, ascending or descending.
 - 🖱️ **Moving items** — click to take a stack, right-click for half (up to 32), shift-click to fill
   your inventory; shift-click your own items to store them back.
@@ -23,6 +23,20 @@ without opening them one by one.
 4. Drag the scrollbar, or scroll over the grid, to reach further items.
 5. Click an item to take it out of the nearby containers; shift-click to take as many as fit in
    your inventory. Shift-click a stack in your own inventory to put it back.
+
+### 🔍 Search syntax
+
+Type one or more words; every word has to match. A word with a prefix searches another field:
+
+| Prefix | Finds items |
+| --- | --- |
+| `@name` | from that mod — mod ID or mod name (`@sophisticatedstorage`) |
+| `#tag` | carrying that item tag, with or without a namespace (`#logs`, `#c:ores`) |
+| `$text` | whose tooltip contains the text (`$fortune`, `$when in main hand`) |
+| `"a b"` | whose name contains the quoted phrase, spaces included |
+
+Without a prefix the item name and its ID are searched. Pinyin (full spelling or initials) works
+when Just Enough Characters is installed.
 
 ## ⚙️ Settings
 
@@ -74,7 +88,7 @@ distributed under the MIT License. See `LICENSE` for the full notice.
 ## ✨ 功能
 
 - 🔭 **汇总成一份列表** —— 扫描你周围的容器，把它们装的东西合在一起显示。
-- 🔍 **搜索** —— 按物品名称、物品 ID，或 `#minecraft:logs` 这样的标签查找。
+- 🔍 **搜索** —— 按名称、ID、模组、标签或提示框文本查找，支持前缀（见下）。
 - ↕️ **排序** —— 按名称、数量、ID 或模组，可升可降。
 - 🖱️ **搬运物品** —— 左键取一组，右键取一半（最多 32 个），Shift 点击取满背包；
   对自己背包里的物品 Shift 点击即可存回附近容器。
@@ -88,6 +102,19 @@ distributed under the MIT License. See `LICENSE` for the full notice.
 4. 拖动滚动条，或把滚轮放在物品区上滚动，查看更后面的物品。
 5. 点击物品即可从附近容器中取出；Shift 点击尽可能多地取进背包；
    对背包里的物品 Shift 点击可存回容器。
+
+### 🔍 搜索语法
+
+可以输入多个词，每个词都要命中。带前缀的词改为搜索对应字段：
+
+| 前缀 | 作用 |
+| --- | --- |
+| `@名称` | 来自该模组的物品，模组 ID 或模组名都行（`@sophisticatedstorage`） |
+| `#标签` | 带该物品标签的物品，可省略命名空间（`#logs`、`#c:ores`） |
+| `$文本` | 提示框里含该文本的物品（`$fortune`、`$在主手时`） |
+| `"甲 乙"` | 名称含该短语（引号内空格不拆词） |
+
+不带前缀时按物品名称与注册 ID 匹配；装了通用拼音搜索后支持全拼与首字母。
 
 ## ⚙️ 设置
 
