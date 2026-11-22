@@ -41,16 +41,6 @@ import java.util.UUID;
 
 public class PortableTerminalMenu extends AbstractContainerMenu {
 
-	/**
-	 * 渲染期间为 true：终端槽位交出空栈，让原版整格跳过。
-	 * 1.20.1 的 {@code AbstractContainerScreen#renderSlot} 是 private、无法覆盖，而它会把数量和
-	 * 耐久条 / 收纳袋容量条一起画出来；只能从槽位取值这一侧让原版什么都不画，
-	 * 物品与数量都由界面层自绘。
-	 *
-	 * <p>放在菜单类而不是界面类：菜单服务端也会加载，不能引用客户端专用类。</p>
-	 */
-	public static boolean hideVanillaSlotContent = false;
-
 	// 槽位坐标为 16x16 物品区左上角（遵循原版 +1 约定）。
 	// 所有随行数变化的值一律走 PortableTerminalLayout，保证「菜单槽位 / 界面尺寸 / 贴图」三者永远一致。
 	public static final int PADDING = PortableTerminalLayout.PADDING;
@@ -840,20 +830,6 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		@Override
 		public boolean mayPickup(Player player) {
 			return false;
-		}
-
-		/**
-		 * 渲染期间交空栈：原版会把数量和耐久条 / 收纳袋容量条一起画，只藏数量藏不住条。
-		 * 界面层用 {@link #getRealItem()} 自绘，点击与提示框也走真实堆叠。
-		 */
-		@Override
-		public ItemStack getItem() {
-			return hideVanillaSlotContent ? ItemStack.EMPTY : super.getItem();
-		}
-
-		/** 真实堆叠（给屏幕自绘物品与数量用，绕过 {@link #getItem()} 的显示替换）。 */
-		public ItemStack getRealItem() {
-			return super.getItem();
 		}
 	}
 }

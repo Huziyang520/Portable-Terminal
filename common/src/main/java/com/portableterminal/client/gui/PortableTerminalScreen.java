@@ -357,96 +357,13 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		// 压暗层是一整屏的 fill 批次，面板是贴图批次；不先落屏的话两者在帧末的刷新顺序不保证，
 		// 切行数重开界面时就会出现「呼吸」闪烁（1.20.2+ 由原版自己画这层，我们这档必须手动 flush）。
 		gfx.flush();
-		// 渲染期间让终端槽位交空栈：原版会把数量和耐久条 / 收纳袋容量条一起画，而 renderSlot
-		// 在 1.20.1 是 private 挡不住，只能整格跳过；物品与数量改由 renderLabels 自绘。
-		PortableTerminalMenu.hideVanillaSlotContent = true;
-		try {
-			super.render(gfx, mouseX, mouseY, partialTick);
-		} finally {
-			PortableTerminalMenu.hideVanillaSlotContent = false;
-		}
-		// 同样因为空栈，原版不会替终端槽位弹提示框；这里在正常坐标系下补一次。
-		if (this.hoveredSlot instanceof PortableTerminalMenu.TerminalSlot && this.hoveredSlot.hasItem()
-			&& this.menu.getCarried().isEmpty()) {
-			this.renderTooltip(gfx, mouseX, mouseY);
-		}
+		super.render(gfx, mouseX, mouseY, partialTick);
 	}
 
 	@Override
 	protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
-		drawTerminalContents(gfx);
 		gfx.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, COL_TEXT, false);
 		gfx.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, COL_TEXT, false);
-	}
-
-	// ==================== 终端槽位自绘 ====================
-
-	// 1.20.1 的 AbstractContainerScreen#renderSlot 是 private，子类同名方法不会被调用，
-	// 所以原版画什么就把什么交出去：渲染期间槽位给空栈，物品、数量、悬停高亮全在这里画。
-
-	private void drawTerminalContents(GuiGraphics gfx) {
-		for (Slot slot : this.menu.slots) {
-			if (!(slot instanceof PortableTerminalMenu.TerminalSlot terminalSlot)) {
-				continue;
-			}
-			ItemStack stack = terminalSlot.getRealItem();
-			if (!stack.isEmpty()) {
-				gfx.renderItem(stack, slot.x, slot.y, slot.x + slot.y * this.imageWidth);
-			}
-		}
-		// 物品是贴图批次、文字是另一个批次，两者帧末刷新顺序不保证（物品批次可能后刷，
-		// 会把缩小的数字整个盖住）。先 flush 让物品落屏，数字才真正压在物品之上。
-		gfx.flush();
-		for (Slot slot : this.menu.slots) {
-			if (!(slot instanceof PortableTerminalMenu.TerminalSlot terminalSlot)) {
-				continue;
-			}
-			ItemStack stack = terminalSlot.getRealItem();
-			if (stack.isEmpty() || stack.getCount() == 1) {
-				continue;
-			}
-			drawScaledCount(gfx, formatCount(stack.getCount()), slot.x, slot.y);
-		}
-		drawHoveredTerminalHighlight(gfx);
-	}
-
-	/** 原版只在槽位有物品时才画悬停高亮，而终端槽位渲染期间是空栈，所以在这里补一层。 */
-	private void drawHoveredTerminalHighlight(GuiGraphics gfx) {
-		Slot hovered = this.hoveredSlot;
-		if (!(hovered instanceof PortableTerminalMenu.TerminalSlot terminalSlot) || terminalSlot.getRealItem().isEmpty()) {
-			return;
-		}
-		gfx.pose().pushPose();
-		gfx.pose().translate(0, 0, 400);
-		gfx.fill(hovered.x, hovered.y, hovered.x + 16, hovered.y + 16, 0x80FFFFFF);
-		gfx.pose().popPose();
-	}
-
-	/** 大数量格式化：万级以上用 K/M 缩写，避免数字过长溢出槽位 */
-	private String formatCount(int count) {
-		if (count >= 1000000) return (count / 1000000) + "M";
-		if (count >= 10000) return (count / 1000) + "K";
-		return String.valueOf(count);
-	}
-
-	/** 自适应缩放绘制数量数字：基础 0.7 倍，文字过宽时自动缩小以适配 16px 槽位 */
-	private void drawScaledCount(GuiGraphics gfx, String text, int slotX, int slotY) {
-		float baseScale = 0.7f;
-		int maxWidth = 15;
-		float textWidth = this.font.width(text);
-		float scale = baseScale;
-		if (textWidth * baseScale > maxWidth) {
-			scale = maxWidth / textWidth;
-		}
-		gfx.pose().pushPose();
-		float drawX = slotX + 16 - textWidth * scale - 1;
-		float drawY = slotY + 16 - 8 * scale - 1;
-		// 数字必须画在物品模型之上：物品是 renderItem 的 +150，原版数量是 renderItemDecorations
-		// 的 +200；本类的物品与数字都在 renderLabels 里画（基准 z = 0），所以取 300 与之拉开。
-		gfx.pose().translate(drawX, drawY, 300.0F);
-		gfx.pose().scale(scale, scale, 1.0F);
-		gfx.drawString(this.font, text, 0, 0, 0xFFFFFFFF, true);
-		gfx.pose().popPose();
 	}
 
 	// ==================== 鼠标交互 ====================
