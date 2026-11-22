@@ -359,52 +359,6 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		gfx.text(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, COL_TEXT, false);
 	}
 
-	// ==================== 终端槽位自定义渲染 ====================
-
-	@Override
-	protected void extractSlot(GuiGraphicsExtractor gfx, Slot slot, int mouseX, int mouseY) {
-		if (slot instanceof PortableTerminalMenu.TerminalSlot) {
-			int x = slot.x;
-			int y = slot.y;
-			ItemStack itemStack = slot.getItem();
-			if (!itemStack.isEmpty()) {
-				int seed = slot.x + slot.y * this.imageWidth;
-				gfx.item(itemStack, x, y, seed);
-				int count = itemStack.getCount();
-				if (count != 1) {
-					drawScaledCount(gfx, formatCount(count), x, y);
-				}
-			}
-		} else {
-			super.extractSlot(gfx, slot, mouseX, mouseY);
-		}
-	}
-
-	/** 大数量格式化：万级以上用 K/M 缩写，避免数字过长溢出槽位 */
-	private String formatCount(int count) {
-		if (count >= 1000000) return (count / 1000000) + "M";
-		if (count >= 10000) return (count / 1000) + "K";
-		return String.valueOf(count);
-	}
-
-	/** 自适应缩放绘制数量数字：基础 0.7 倍，文字过宽时自动缩小以适配 16px 槽位 */
-	private void drawScaledCount(GuiGraphicsExtractor gfx, String text, int slotX, int slotY) {
-		float baseScale = 0.7f;
-		int maxWidth = 15;
-		float textWidth = this.font.width(text);
-		float scale = baseScale;
-		if (textWidth * baseScale > maxWidth) {
-			scale = maxWidth / textWidth;
-		}
-		gfx.pose().pushMatrix();
-		float drawX = slotX + 16 - textWidth * scale - 1;
-		float drawY = slotY + 16 - 8 * scale - 1;
-		gfx.pose().translate(drawX, drawY);
-		gfx.pose().scale(scale, scale);
-		gfx.text(this.font, text, 0, 0, 0xFFFFFFFF, true);
-		gfx.pose().popMatrix();
-	}
-
 	// ==================== 鼠标交互 ====================
 
 	@Override
