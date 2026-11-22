@@ -358,6 +358,9 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		// 切行数重开界面时就会出现「呼吸」闪烁（1.20.2+ 由原版自己画这层，我们这档必须手动 flush）。
 		gfx.flush();
 		super.render(gfx, mouseX, mouseY, partialTick);
+		// 1.20.1 的 AbstractContainerScreen.render 不调 renderTooltip，具体界面各自调用
+		// （原版箱子屏 ContainerScreen.render 就是这么写的）；漏掉这一句终端就没有提示框。
+		this.renderTooltip(gfx, mouseX, mouseY);
 	}
 
 	@Override
