@@ -29,6 +29,12 @@ public class ForgePlatformHelper implements IPlatformHelper {
 		return ModList.get().isLoaded(modId);
 	}
 
+	public String getModDisplayName(String modId) {
+		return ModList.get().getModContainerById(modId)
+			.map(container -> container.getModInfo().getDisplayName())
+			.orElse(null);
+	}
+
 	public boolean isDevelopmentEnvironment() {
 		return !FMLEnvironment.production;
 	}

@@ -26,6 +26,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -34,20 +35,21 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
 public class PortableTerminalMenu extends AbstractContainerMenu {
 
 	/**
-	 * 渲染期间为 true：终端槽位返回「数量 1」的副本，让原版不画数量数字。
-	 * 1.20.1 的原版 {@code GuiGraphics#renderItemDecorations} 不缩小大数量（1.20.2+ 才有），
-	 * 而 {@code AbstractContainerScreen#renderSlot} 是 private、无法覆盖，所以只能从槽位取值这一侧
-	 * 把原版数字让出来，真正的数字由界面层按比例自绘。
+	 * 渲染期间为 true：终端槽位交出空栈，让原版整格跳过。
+	 * 1.20.1 的 {@code AbstractContainerScreen#renderSlot} 是 private、无法覆盖，而它会把数量和
+	 * 耐久条 / 收纳袋容量条一起画出来；只能从槽位取值这一侧让原版什么都不画，
+	 * 物品与数量都由界面层自绘。
 	 *
 	 * <p>放在菜单类而不是界面类：菜单服务端也会加载，不能引用客户端专用类。</p>
 	 */
-	public static boolean hideVanillaCounts = false;
+	public static boolean hideVanillaSlotContent = false;
 
 	// 槽位坐标为 16x16 物品区左上角（遵循原版 +1 约定）。
 	// 所有随行数变化的值一律走 PortableTerminalLayout，保证「菜单槽位 / 界面尺寸 / 贴图」三者永远一致。
@@ -106,6 +108,10 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 	private final VirtualTerminalContainer terminalContainer;
 	private int scrollOffset = 0;
 	private String searchQuery = "";
+	/** 上一次输入切出来的条件（每个都必须匹配）。 */
+	private List<String> searchTerms = List.of();
+	/** 提示框文本缓存，键见 {@link #tooltipKey(ItemStack)}；只在搜索用到 {@code $} 时才会填充。 */
+	private static final Map<String, String> TOOLTIP_CACHE = new HashMap<>();
 
 	public PortableTerminalMenu(int containerId, Inventory playerInventory, List<BlockPos> containerPositions, int rows) {
 		super(ModMenuTypes.get(), containerId);
@@ -239,9 +245,15 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		return (displayedItems.size() + COLS - 1) / COLS;
 	}
 
-	/** 客户端搜索过滤：按物品显示名或注册ID（不区分大小写） */
+	/**
+	 * 客户端搜索过滤：空白分隔的多个条件必须同时满足。
+	 *
+	 * <p>条件前缀：{@code @} 按模组（命名空间或模组名）、{@code #} 按物品标签、{@code $} 按提示框文本；
+	 * 没有前缀的条件按显示名 / 注册 ID 匹配。双引号里的空格不切分，便于搜索带空格的名称。</p>
+	 */
 	public void applySearchFilter(String query) {
-		this.searchQuery = query == null ? "" : query.trim().toLowerCase();
+		this.searchQuery = query == null ? "" : query.trim();
+		this.searchTerms = splitSearchTerms(this.searchQuery);
 		rebuildDisplayedItems();
 		this.scrollOffset = 0;
 		updateTerminalSlots();
@@ -273,26 +285,122 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		});
 	}
 
+	/** 把搜索串切成条件：空白分隔，双引号内不切（空条件已丢弃）。 */
+	private static List<String> splitSearchTerms(String query) {
+		List<String> terms = new ArrayList<>();
+		StringBuilder current = new StringBuilder();
+		boolean quoted = false;
+		for (int i = 0; i < query.length(); i++) {
+			char c = query.charAt(i);
+			if (c == '"') {
+				quoted = !quoted;
+			} else if (!quoted && Character.isWhitespace(c)) {
+				if (!current.isEmpty()) {
+					terms.add(current.toString());
+					current.setLength(0);
+				}
+			} else {
+				current.append(c);
+			}
+		}
+		if (!current.isEmpty()) {
+			terms.add(current.toString());
+		}
+		return terms;
+	}
+
 	private boolean matchesSearch(ItemStack stack, String query) {
-		// 标签搜索：#tagName 或 #namespace:tagName
-		if (query.startsWith("#")) {
-			String tagName = query.substring(1);
-			if (tagName.isEmpty()) return false;
-			try {
-				ResourceLocation tagId = tagName.contains(":")
-					? new ResourceLocation(tagName)
-					: new ResourceLocation("minecraft", tagName);
-				TagKey<Item> tagKey = TagKey.create(Registries.ITEM, tagId);
-				return stack.is((java.util.function.Predicate<Holder<Item>>) holder -> holder.is(tagKey));
-			} catch (Exception e) {
+		for (String term : this.searchTerms) {
+			if (!matchesTerm(stack, term)) {
 				return false;
 			}
 		}
-		// 名称搜索：装了「通用拼音搜索」时由它接管（支持全拼、首字母、简繁），否则退化为子串匹配
-		String name = stack.getHoverName().getString();
-		if (PinyinSearch.matches(name, query)) return true;
-		String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString().toLowerCase();
-		return id.contains(query);
+		return true;
+	}
+
+	private boolean matchesTerm(ItemStack stack, String term) {
+		if (term.isEmpty()) {
+			return true;
+		}
+		String value = term.substring(1).toLowerCase(Locale.ROOT);
+		return switch (term.charAt(0)) {
+			case '@' -> matchesMod(stack, value);
+			case '#' -> matchesTag(stack, value);
+			case '$' -> matchesTooltip(stack, value);
+			default -> matchesName(stack, term.toLowerCase(Locale.ROOT));
+		};
+	}
+
+	/** 显示名 / 注册 ID；装了「通用拼音搜索」时由它接管（全拼、首字母、简繁）。 */
+	private boolean matchesName(ItemStack stack, String query) {
+		if (query.isEmpty()) {
+			return true;
+		}
+		if (PinyinSearch.matches(stack.getHoverName().getString(), query)) {
+			return true;
+		}
+		return BuiltInRegistries.ITEM.getKey(stack.getItem()).toString().toLowerCase(Locale.ROOT).contains(query);
+	}
+
+	/**
+	 * 模组搜索：命名空间本身就是 mod id；模组展示名由加载器提供，缺失时只比 id。
+	 * 走平台接口而不是加载器 API，common 才能保持裸 MC 编译。
+	 */
+	private boolean matchesMod(ItemStack stack, String query) {
+		if (query.isEmpty()) {
+			return true;
+		}
+		String namespace = BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace();
+		if (namespace.toLowerCase(Locale.ROOT).contains(query)) {
+			return true;
+		}
+		return PinyinSearch.matches(Services.PLATFORM.getModDisplayName(namespace), query);
+	}
+
+	/** 标签搜索：{@code #logs}、{@code #minecraft:logs} 都按「标签 ID 包含该串」判定。 */
+	private boolean matchesTag(ItemStack stack, String query) {
+		if (query.isEmpty()) {
+			return true;
+		}
+		for (TagKey<Item> tag : stack.getTags().toList()) {
+			if (tag.location().toString().toLowerCase(Locale.ROOT).contains(query)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * 提示框搜索：按物品自带的提示文本匹配（附魔、药水效果、模组说明都能命中）。
+	 * 提示文本生成代价高，按「id + 损伤 + 显示名」缓存，输入过程中不会反复重算。
+	 */
+	private boolean matchesTooltip(ItemStack stack, String query) {
+		if (query.isEmpty()) {
+			return true;
+		}
+		if (TOOLTIP_CACHE.size() > 8192) {
+			TOOLTIP_CACHE.clear();
+		}
+		String text = TOOLTIP_CACHE.computeIfAbsent(tooltipKey(stack), key -> buildTooltipText(stack));
+		return text.contains(query);
+	}
+
+	private static String tooltipKey(ItemStack stack) {
+		return BuiltInRegistries.ITEM.getKey(stack.getItem()) + "|" + stack.getDamageValue() + "|" + stack.getHoverName().getString();
+	}
+
+	private String buildTooltipText(ItemStack stack) {
+		try {
+			List<Component> lines = stack.getTooltipLines(this.player, TooltipFlag.Default.NORMAL);
+			StringBuilder text = new StringBuilder();
+			for (Component line : lines) {
+				text.append(line.getString()).append('\n');
+			}
+			return text.toString().toLowerCase(Locale.ROOT);
+		} catch (Exception e) {
+			// 物品自己的提示框实现可能依赖上下文；单件失败不该让整次过滤报错。
+			return "";
+		}
 	}
 
 	/** 接收服务器同步的聚合物品列表 */
@@ -720,9 +828,6 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 
 	public static class TerminalSlot extends Slot {
 
-		/** 「数量 1」副本的来源快照；槽位内容不变时复用副本，避免每帧复制 NBT。 */
-		private ItemStack countHiddenSource = ItemStack.EMPTY;
-		private ItemStack countHiddenCopy = ItemStack.EMPTY;
 		public TerminalSlot(Container container, int index, int x, int y) {
 			super(container, index, x, y);
 		}
@@ -738,26 +843,15 @@ public class PortableTerminalMenu extends AbstractContainerMenu {
 		}
 
 		/**
-		 * 屏幕渲染期间返回「数量 1」的副本：1.20.1 的原版数量绘制不会缩小大数量，
-		 * 而槽位渲染方法在 AbstractContainerScreen 里是 private、无法覆盖，
-		 * 所以从取值这一侧让原版跳过数量，真正的数字由界面层自绘。
-		 * 非渲染期间（点击、提示框等）一律返回真实堆叠。
+		 * 渲染期间交空栈：原版会把数量和耐久条 / 收纳袋容量条一起画，只藏数量藏不住条。
+		 * 界面层用 {@link #getRealItem()} 自绘，点击与提示框也走真实堆叠。
 		 */
 		@Override
 		public ItemStack getItem() {
-			ItemStack stack = super.getItem();
-			if (!hideVanillaCounts || stack.isEmpty() || stack.getCount() <= 1) {
-				return stack;
-			}
-			if (!ItemStack.matches(this.countHiddenSource, stack)) {
-				this.countHiddenCopy = stack.copy();
-				this.countHiddenCopy.setCount(1);
-				this.countHiddenSource = stack.copy();
-			}
-			return this.countHiddenCopy;
+			return hideVanillaSlotContent ? ItemStack.EMPTY : super.getItem();
 		}
 
-		/** 真实堆叠（给屏幕自绘数量用，绕过 {@link #getItem()} 的显示替换）。 */
+		/** 真实堆叠（给屏幕自绘物品与数量用，绕过 {@link #getItem()} 的显示替换）。 */
 		public ItemStack getRealItem() {
 			return super.getItem();
 		}

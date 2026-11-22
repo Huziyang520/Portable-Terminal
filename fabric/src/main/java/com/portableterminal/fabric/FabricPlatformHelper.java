@@ -30,6 +30,12 @@ public boolean isModLoaded(String modId) {
 		return FabricLoader.getInstance().isModLoaded(modId);
 	}
 
+public String getModDisplayName(String modId) {
+		return FabricLoader.getInstance().getModContainer(modId)
+			.map(container -> container.getMetadata().getName())
+			.orElse(null);
+	}
+
 public boolean isDevelopmentEnvironment() {
 		return FabricLoader.getInstance().isDevelopmentEnvironment();
 	}
