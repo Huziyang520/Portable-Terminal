@@ -365,72 +365,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 	@Override
 	protected void renderLabels(GuiGraphics gfx, int mouseX, int mouseY) {
-		// 槽位循环已经结束（原版把 renderLabels 放在槽位循环之后调用），此时才能安全地画数量。
-		drawTerminalCounts(gfx);
 		gfx.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, COL_TEXT, false);
 		gfx.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, COL_TEXT, false);
-	}
-
-	/**
-	 * 画出终端槽位的数量文字。
-	 *
-	 * <p>关键不在提交时机，而在 z：物品（3D 模型）是带深度测试绘制的，绘制时会把深度写进缓冲，
-	 * 它的位置等价于 pose 的 z=150；数量文字必须画在更靠前的 z 才能盖住物品。原版
-	 * {@code renderItemDecorations} 就是在画数量前 {@code pose.translate(0, 0, 200)}（1.20.4 /
-	 * 1.21.1 字节码核实），本项目照做。逐槽位画、槽位循环之后画都可以，z 才是决定因素。</p>
-	 */
-	private void drawTerminalCounts(GuiGraphics gfx) {
-		gfx.flush();
-		for (Slot slot : this.menu.slots) {
-			if (!(slot instanceof PortableTerminalMenu.TerminalSlot)) {
-				continue;
-			}
-			ItemStack stack = slot.getItem();
-			if (stack.isEmpty() || stack.getCount() == 1) {
-				continue;
-			}
-			drawScaledCount(gfx, formatCount(stack.getCount()), slot.x, slot.y);
-		}
-	}
-
-	// ==================== 终端槽位自定义渲染 ====================
-
-	@Override
-	protected void renderSlot(GuiGraphics gfx, Slot slot) {
-		if (slot instanceof PortableTerminalMenu.TerminalSlot) {
-			ItemStack itemStack = slot.getItem();
-			if (!itemStack.isEmpty()) {
-				int seed = slot.x + slot.y * this.imageWidth;
-				gfx.renderItem(itemStack, slot.x, slot.y, seed);
-			}
-		} else {
-			super.renderSlot(gfx, slot);
-		}
-	}
-
-	/** 大数量格式化：万级以上用 K/M 缩写，避免数字过长溢出槽位 */
-	private String formatCount(int count) {
-		if (count >= 1000000) return (count / 1000000) + "M";
-		if (count >= 10000) return (count / 1000) + "K";
-		return String.valueOf(count);
-	}
-
-	/** 自适应缩放绘制数量数字：基础 0.7 倍，文字过宽时自动缩小以适配 16px 槽位 */
-	private void drawScaledCount(GuiGraphics gfx, String text, int slotX, int slotY) {
-		float baseScale = 0.7f;
-		int maxWidth = 15;
-		float textWidth = this.font.width(text);
-		float scale = baseScale;
-		if (textWidth * baseScale > maxWidth) {
-			scale = maxWidth / textWidth;
-		}
-		gfx.pose().pushPose();
-		float drawX = slotX + 16 - textWidth * scale - 1;
-		float drawY = slotY + 16 - 8 * scale - 1;
-		gfx.pose().translate(drawX, drawY, 200.0F);
-		gfx.pose().scale(scale, scale, 1.0F);
-		gfx.drawString(this.font, text, 0, 0, 0xFFFFFFFF, true);
-		gfx.pose().popPose();
 	}
 
 	// ==================== 鼠标交互 ====================
