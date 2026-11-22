@@ -22,6 +22,14 @@ public interface IPlatformHelper {
 
 	boolean isModLoaded(String modId);
 
+	/**
+	 * 模组展示名（搜索用 {@code @mod}）；加载器查不到该 id 时返回 {@code null}。
+	 * 默认返回 null，未实现的加载器退化为只按命名空间匹配。
+	 */
+	default String getModDisplayName(String modId) {
+		return null;
+	}
+
 	boolean isDevelopmentEnvironment();
 
 	/** Server to client delivery. Safe to call from the logical server on both loaders. */

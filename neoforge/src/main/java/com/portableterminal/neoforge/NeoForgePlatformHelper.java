@@ -35,6 +35,13 @@ public boolean isModLoaded(String modId) {
 	}
 
 	@Override
+	public String getModDisplayName(String modId) {
+		return ModList.get().getModContainerById(modId)
+			.map(container -> container.getModInfo().getDisplayName())
+			.orElse(null);
+	}
+
+	@Override
 public boolean isDevelopmentEnvironment() {
 		// 1.20.2~1.21.11 的 FML 里生产环境标记是 public static 字段 production（isProduction() 是 26.x 才有的方法）
 		return !FMLEnvironment.production;
