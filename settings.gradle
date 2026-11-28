@@ -20,10 +20,10 @@ plugins {
 }
 
 rootProject.name = 'portableterminal-26.3'
-includeBuild('../../build-logic')
+includeBuild('build-logic')
 include 'common'
 include 'fabric'
 include 'neoforge'
-project(':common').projectDir = file('../../common')
-project(':fabric').projectDir = file('../../fabric')
-project(':neoforge').projectDir = file('../../neoforge')
+project(':common').projectDir = file('common')
+project(':fabric').projectDir = file('fabric')
+project(':neoforge').projectDir = file('neoforge')

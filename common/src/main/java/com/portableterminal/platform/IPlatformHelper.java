@@ -50,4 +50,16 @@ public interface IPlatformHelper {
 	default String getEnvironmentName() {
 		return isDevelopmentEnvironment() ? "development" : "production";
 	}
+
+	/**
+	 * 打开本模组的配置界面。
+	 *
+	 * <p>参数用 {@code Object} 而不是 {@code Screen}，避免服务端加载这个接口时碰到只在客户端存在的类；
+	 * 各加载器的实现自己转成 {@code Screen}。</p>
+	 *
+	 * @return 是否成功打开
+	 */
+	default boolean openConfigScreen(Object parent) {
+		return false;
+	}
 }

@@ -5,6 +5,7 @@ import com.portableterminal.PortableTerminalMod;
 import com.portableterminal.client.gui.PortableTerminalScreen;
 import com.portableterminal.client.keybind.KeyBindHandler;
 import com.portableterminal.menu.ModMenuTypes;
+import com.portableterminal.network.TerminalCraftActionPacket;
 import com.portableterminal.network.TerminalItemsSyncPacket;
 import com.portableterminal.platform.ClientSender;
 import net.minecraft.client.KeyMapping;
@@ -28,6 +29,12 @@ public class PortableTerminalNeoForgeClient {
 
 		ClientSender.install(ClientPacketDistributor::sendToServer);
 
+		// 界面里的「配置」按钮：复用 NeoForge 给模组列表提供的配置屏工厂。
+		NeoForgePlatformHelper.setConfigScreenFactory(parent -> container
+			.getCustomExtension(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class)
+			.map(factory -> factory.createScreen(container, (net.minecraft.client.gui.screens.Screen) parent))
+			.orElse(null));
+
 		modBus.addListener(this::registerPayloads);
 		modBus.addListener(this::registerKeyMappings);
 		modBus.addListener(this::registerMenuScreens);
@@ -39,6 +46,10 @@ public class PortableTerminalNeoForgeClient {
 		event.registrar("1").playToClient(TerminalItemsSyncPacket.TYPE, TerminalItemsSyncPacket.CODEC,
 			(payload, context) -> context.enqueueWork(() ->
 				PortableTerminalClient.handleItemsSync(payload.items())));
+
+		event.registrar("1").playToServer(TerminalCraftActionPacket.TYPE, TerminalCraftActionPacket.CODEC,
+			(payload, context) -> context.enqueueWork(() ->
+				TerminalCraftActionPacket.handleServer((net.minecraft.server.level.ServerPlayer) context.player(), payload)));
 	}
 
 	private void registerKeyMappings(RegisterKeyMappingsEvent event) {

@@ -27,6 +27,10 @@ public final class ModConfig {
 	public static volatile int scanRadius = ConfigSchema.DEFAULT_SCAN_RADIUS;
 	public static volatile boolean masterSwitch = ConfigSchema.DEFAULT_MASTER_SWITCH;
 	public static volatile boolean craftingEnabled = ConfigSchema.DEFAULT_CRAFTING;
+	public static volatile boolean showRecipeBook = ConfigSchema.DEFAULT_SHOW_RECIPE_BOOK;
+	/** 合成取料来源 / 清空去向：玩家偏好，存在状态文件里。 */
+	public static volatile int craftSource = ConfigSchema.DEFAULT_CRAFT_SOURCE;
+	public static volatile int clearDestination = ConfigSchema.DEFAULT_CLEAR_DEST;
 	public static volatile int terminalRows = ConfigSchema.DEFAULT_TERMINAL_ROWS;
 	public static volatile String sortConfig = "";
 	public static volatile String insertOrder = ConfigSchema.DEFAULT_INSERT_ORDER;
@@ -41,9 +45,11 @@ public final class ModConfig {
 	}
 
 	/** spec 载入/重载后把值刷进快照；缺项落回登记表默认值并夹到范围内。 */
-	public static void applyAll(boolean master, int radius, List<String> blacklist, String order, boolean crafting) {
+	public static void applyAll(boolean master, int radius, List<String> blacklist, String order, boolean crafting,
+			boolean recipeBook) {
 		masterSwitch = master;
 		craftingEnabled = crafting;
+		showRecipeBook = recipeBook;
 		insertOrder = order != null ? order : ConfigSchema.DEFAULT_INSERT_ORDER;
 		scanRadius = Math.max(ConfigSchema.MIN_SCAN_RADIUS, Math.min(ConfigSchema.MAX_SCAN_RADIUS, radius));
 		BLACKLIST.clear();
@@ -89,6 +95,12 @@ public final class ModConfig {
 			if (obj.has("terminalRows")) {
 				terminalRows = PortableTerminalLayout.clampRows(obj.get("terminalRows").getAsInt());
 			}
+			if (obj.has("craftSource")) {
+				craftSource = Math.floorMod(obj.get("craftSource").getAsInt(), ConfigSchema.CRAFT_SOURCE_COUNT);
+			}
+			if (obj.has("clearDestination")) {
+				clearDestination = Math.floorMod(obj.get("clearDestination").getAsInt(), ConfigSchema.CLEAR_DEST_COUNT);
+			}
 		} catch (Exception e) {
 			PortableTerminalMod.LOGGER.error("Failed to read the terminal state file, keeping defaults.", e);
 		}
@@ -98,6 +110,8 @@ public final class ModConfig {
 		JsonObject obj = new JsonObject();
 		obj.addProperty("sortConfig", sortConfig);
 		obj.addProperty("terminalRows", terminalRows);
+		obj.addProperty("craftSource", craftSource);
+		obj.addProperty("clearDestination", clearDestination);
 		try {
 			Files.writeString(statePath(), GSON.toJson(obj));
 		} catch (IOException e) {

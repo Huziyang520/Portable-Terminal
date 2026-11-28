@@ -4,6 +4,7 @@
 
 package com.portableterminal.menu;
 
+import com.portableterminal.config.ConfigSchema;
 import com.portableterminal.config.ModConfig;
 import com.portableterminal.inventory.ItemAccess;
 import com.portableterminal.inventory.VanillaContainerAccess;
@@ -20,9 +21,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.Prediction;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.StackedItemContents;
 import net.minecraft.world.inventory.AbstractCraftingMenu;
 import net.minecraft.world.inventory.RecipeBookType;
 import net.minecraft.world.inventory.ResultSlot;
@@ -32,11 +35,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.PlacementInfo;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.recipebook.PlaceRecipeHelper;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -62,17 +68,16 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 	public static final int OFFHAND_X = PortableTerminalLayout.OFFHAND_X;
 
 	// ==================== 槽位索引 ====================
-	// 新增的合成槽一律排在末尾：终端 / 背包 / 快捷栏 / 副手的索引与顺序保持原样，
-	// 现有 quickMoveStack 的区间判断、点击包与同步逻辑都不必改。
+	// 新增的合成槽一律排在末尾：终端 / 背包 / 快捷栏 / 副手的索引与顺序保持原样。
 	public static final int PLAYER_INV_START = PortableTerminalLayout.MAX_ROWS * PortableTerminalLayout.COLS;
 	public static final int PLAYER_MAIN_SLOTS = 36;
 	public static final int PLAYER_HOTBAR_SLOTS = 9;
-	public static final int CRAFT_SLOT_START = PLAYER_INV_START + PLAYER_MAIN_SLOTS + PLAYER_HOTBAR_SLOTS + 1;
-	public static final int CRAFT_SLOT_END = CRAFT_SLOT_START + PortableTerminalLayout.CRAFT_SLOT_COUNT;
-	public static final int RESULT_SLOT_INDEX = CRAFT_SLOT_END;
 	public static final int OFFHAND_INDEX = PLAYER_INV_START + PLAYER_MAIN_SLOTS + PLAYER_HOTBAR_SLOTS;
 	/** 背包（主背包 + 快捷栏，不含副手）的槽位区间，Shift 移动用。 */
 	public static final int PLAYER_INV_END = OFFHAND_INDEX;
+	public static final int CRAFT_SLOT_START = OFFHAND_INDEX + 1;
+	public static final int CRAFT_SLOT_END = CRAFT_SLOT_START + PortableTerminalLayout.CRAFT_SLOT_COUNT;
+	public static final int RESULT_SLOT_INDEX = CRAFT_SLOT_END;
 
 	/**
 	 * 终端槽位固定按最大行数创建，行数只影响「显示几行」。
@@ -86,10 +91,18 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 
 	/** 当前显示行数（只影响布局，不影响槽位总数）。 */
 	private int rows;
-	/** 是否显示合成带：只影响槽位坐标与面板贴图，槽位本身两端永远存在，所以不必改开终端协议。 */
+	/** 是否显示合成带：只影响槽位坐标与面板贴图，槽位本身两端永远存在。 */
 	private boolean craftingVisible = true;
 	/** 摆放配方期间不逐格重算结果，交给 finishPlacingRecipe 统一算一次。 */
 	private boolean placingRecipe;
+	/** 合成取料来源（需要服务端也知道，随打开包与切换包同步）。 */
+	private int craftSource = ConfigSchema.DEFAULT_CRAFT_SOURCE;
+	/** 清空合成栏的去向。 */
+	private int clearDestination = ConfigSchema.DEFAULT_CLEAR_DEST;
+
+	/** 合成网格与结果槽：直接持引用，不靠下标取，布局异常时也不会越界。 */
+	private final List<Slot> craftGridSlots = new ArrayList<>();
+	private Slot craftResultSlot;
 
 	private static final Map<UUID, List<BlockPos>> PENDING_POSITIONS = new HashMap<>();
 	private final List<BlockPos> containerPositions = new ArrayList<>();
@@ -98,15 +111,14 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 	private final List<ItemStack> aggregatedItems = new ArrayList<>();
 	private final List<ItemStack> displayedItems = new ArrayList<>();
 
-	// ===== 排序模式（多条件并列，各自独立切换 无→↑→↓→无）=====
+	// ===== 排序：一个类型 + 一个方向 =====
 	public enum SortDirection {
 		NONE, ASC, DESC
 	}
 
-	// 0=名称, 1=数量, 2=ID, 3=模组；默认选中「数量 · 由多到少」
-	private final SortDirection[] sortDirs = new SortDirection[]{
-		SortDirection.NONE, SortDirection.DESC, SortDirection.NONE, SortDirection.NONE
-	};
+	/** 0=名称, 1=数量, 2=ID, 3=模组；默认「数量 · 由多到少」。 */
+	private int sortMode = 1;
+	private boolean sortAscending = false;
 
 	// 排序按钮翻译键（语言文件驱动）
 	private static final String[] SORT_NAME_KEYS = {
@@ -147,6 +159,19 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 
 		loadSortConfig();
 		rebuildSlots();
+
+		// 诊断用：合成槽必须真的进了槽位表，否则合成格点了没反应（只在建菜单时打一条）。
+		int expected = terminalSlotCount() + PLAYER_MAIN_SLOTS + PLAYER_HOTBAR_SLOTS + 1
+			+ PortableTerminalLayout.CRAFT_SLOT_COUNT + 1;
+		if (this.slots.size() == expected && this.craftGridSlots.size() == PortableTerminalLayout.CRAFT_SLOT_COUNT) {
+			com.portableterminal.PortableTerminalMod.LOGGER.info(
+				"Terminal menu built: {} slots (terminal {}, crafting {})", this.slots.size(),
+				terminalSlotCount(), PortableTerminalLayout.CRAFT_SLOT_COUNT);
+		} else {
+			com.portableterminal.PortableTerminalMod.LOGGER.warn(
+				"Terminal menu slot layout mismatch: slots={} expected={} grid={} result={}",
+				this.slots.size(), expected, this.craftGridSlots.size(), this.craftResultSlot != null);
+		}
 	}
 
 	public int getRows() {
@@ -157,19 +182,27 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 		return PortableTerminalLayout.terminalSlotCount(CAPACITY_ROWS);
 	}
 
-	/**
-	 * 改显示行数：只按新行数重建槽位（数量与顺序不变），不重开界面。
-	 *
-	 * <p>槽位坐标在 26.x 里是 final，改不了，所以重建同一批槽位对象；总数不变，
-	 * 原版按索引做的槽位同步缓存仍然有效。</p>
-	 */
-	public void applyViewRows(int viewRows) {
-		applyViewLayout(viewRows, this.craftingVisible);
+	// ==================== 客户端偏好 ====================
+
+	public int getCraftSource() {
+		return craftSource;
+	}
+
+	public int getClearDestination() {
+		return clearDestination;
+	}
+
+	/** 打开终端时由打开包带上；界面内切换时由切换包带上。 */
+	public void setCraftingModes(int craftSource, int clearDestination) {
+		this.craftSource = Math.max(0, Math.min(ConfigSchema.CRAFT_SOURCE_COUNT - 1, craftSource));
+		this.clearDestination = Math.max(0, Math.min(ConfigSchema.CLEAR_DEST_COUNT - 1, clearDestination));
 	}
 
 	/**
-	 * 行数与合成带一起切换布局：两者都会改槽位坐标，所以走同一条重建路径。
-	 * 槽位总数不变，原版按索引做的同步缓存仍然有效。
+	 * 改显示行数 / 合成带：只按新布局重建槽位（数量与顺序不变），不重开界面。
+	 *
+	 * <p>槽位坐标在 26.x 里是 final，改不了，所以重建同一批槽位对象；总数不变，
+	 * 原版按索引做的槽位同步缓存仍然有效。</p>
 	 */
 	public void applyViewLayout(int viewRows, boolean crafting) {
 		int next = PortableTerminalLayout.clampRows(viewRows);
@@ -183,8 +216,12 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 		updateTerminalSlots();
 	}
 
+	public void applyViewRows(int viewRows) {
+		applyViewLayout(viewRows, this.craftingVisible);
+	}
+
 	/**
-	 * 按当前 {@link #rows} 重建全部槽位：终端槽（固定最大行数）+ 主背包 + 快捷栏 + 副手。
+	 * 按当前 {@link #rows} 重建全部槽位：终端槽（固定最大行数）+ 主背包 + 快捷栏 + 副手 + 合成区。
 	 *
 	 * <p>槽位总数与顺序永远不变，所以第二次起是**逐位替换槽位对象**而不是清空重加：
 	 * 原版 {@code lastSlots} / {@code remoteSlots} 是按索引跟着 {@code addSlot} 扩容的，
@@ -262,6 +299,7 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 	/** 3×3 网格 + 结果槽。关闭合成时挪出屏幕，但槽位对象仍然存在：两端槽位数必须一致。 */
 	private List<Slot> createCraftingSlots() {
 		List<Slot> slots = new ArrayList<>(PortableTerminalLayout.CRAFT_SLOT_COUNT + 1);
+		List<Slot> grid = new ArrayList<>(PortableTerminalLayout.CRAFT_SLOT_COUNT);
 		int bandTop = PortableTerminalLayout.craftBandTop(this.rows);
 		for (int row = 0; row < PortableTerminalLayout.CRAFT_GRID_SIZE; row++) {
 			for (int col = 0; col < PortableTerminalLayout.CRAFT_GRID_SIZE; col++) {
@@ -270,23 +308,30 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 					? PortableTerminalLayout.CRAFT_GRID_X + col * SLOT_SIZE : HIDDEN_SLOT_X;
 				int y = this.craftingVisible
 					? bandTop + PortableTerminalLayout.CRAFT_GRID_Y + row * SLOT_SIZE : HIDDEN_SLOT_Y;
-				slots.add(new Slot(this.craftSlots, idx, x, y));
+				Slot slot = new Slot(this.craftSlots, idx, x, y);
+				slots.add(slot);
+				grid.add(slot);
 			}
 		}
 		int resultX = this.craftingVisible ? PortableTerminalLayout.CRAFT_RESULT_X : HIDDEN_SLOT_X;
 		int resultY = this.craftingVisible ? bandTop + PortableTerminalLayout.CRAFT_RESULT_Y : HIDDEN_SLOT_Y;
-		slots.add(new ResultSlot(this.player, this.craftSlots, this.resultSlots, 0, resultX, resultY));
+		Slot result = new ResultSlot(this.player, this.craftSlots, this.resultSlots, 0, resultX, resultY);
+		slots.add(result);
+
+		this.craftGridSlots.clear();
+		this.craftGridSlots.addAll(grid);
+		this.craftResultSlot = result;
 		return slots;
 	}
 
 	@Override
 	public Slot getResultSlot() {
-		return this.slots.get(RESULT_SLOT_INDEX);
+		return this.craftResultSlot;
 	}
 
 	@Override
 	public List<Slot> getInputGridSlots() {
-		return this.slots.subList(CRAFT_SLOT_START, CRAFT_SLOT_END);
+		return this.craftGridSlots;
 	}
 
 	@Override
@@ -347,11 +392,232 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 			this.containerId, this.incrementStateId(), RESULT_SLOT_INDEX, result));
 	}
 
-	/** 关终端时把网格里的东西还给玩家（放不下的按原版逻辑落地，绝不留在一个已关闭的菜单里）。 */
+	/**
+	 * 配方书点配方：自己摆放，材料可以从终端容器里取。
+	 *
+	 * <p>原版 {@code AbstractCraftingMenu} 只从玩家背包取料，终端里的物品它看不见，
+	 * 所以这里照原版同一套 {@code PlacementInfo} / {@code PlaceRecipeHelper} 重写摆放，
+	 * 取料顺序由配置项「合成取料来源」决定。排列不进去时退化成原版行为：清空网格、只显示 ghost。</p>
+	 */
+	@Override
+	public PostPlaceAction handlePlacement(boolean useMaxItems, boolean allowDroppingItemsToClear,
+			RecipeHolder<?> recipe, ServerLevel level, Inventory inventory) {
+		if (!this.craftingVisible || this.craftGridSlots.size() < PortableTerminalLayout.CRAFT_SLOT_COUNT) {
+			return PostPlaceAction.NOTHING;
+		}
+		PlacementInfo info = recipe.value().placementInfo();
+		if (info.isImpossibleToPlace()) {
+			return PostPlaceAction.NOTHING;
+		}
+		List<Ingredient> ingredients = info.ingredients();
+
+		// 每个 ingredient 在网格里占几格
+		int[] slotsPerIngredient = new int[ingredients.size()];
+		for (int index : info.slotsToIngredientIndex()) {
+			if (index >= 0 && index < slotsPerIngredient.length) {
+				slotsPerIngredient[index]++;
+			}
+		}
+
+		// 能摆几套（Shift 一次摆满，否则一套）
+		int sets = useMaxItems ? 64 : 1;
+		for (int i = 0; i < slotsPerIngredient.length && sets > 0; i++) {
+			if (slotsPerIngredient[i] <= 0) continue;
+			int available = countAvailable(ingredients.get(i));
+			sets = Math.min(sets, available / slotsPerIngredient[i]);
+		}
+		if (sets <= 0) {
+			clearCraftingGrid();
+			updateCraftingResult(null);
+			return PostPlaceAction.PLACE_GHOST_RECIPE;
+		}
+		final int perSlot = Math.min(sets, 64);
+
+		clearCraftingGrid();
+		PlaceRecipeHelper.placeRecipe(PortableTerminalLayout.CRAFT_GRID_SIZE,
+			PortableTerminalLayout.CRAFT_GRID_SIZE, recipe.value(), info.slotsToIngredientIndex(),
+			(ingredientIndex, gridIndex, gridXPos, gridYPos) -> {
+				if (ingredientIndex == null || ingredientIndex < 0 || gridIndex >= this.craftGridSlots.size()) {
+					return;
+				}
+				ItemStack taken = takeForIngredient(ingredients.get(ingredientIndex), perSlot);
+				if (!taken.isEmpty()) {
+					this.craftGridSlots.get(gridIndex).set(taken);
+				}
+			});
+		updateCraftingResult(null);
+		return PostPlaceAction.NOTHING;
+	}
+
+	/** 按「合成取料来源」统计某材料当前能拿到多少。 */
+	private int countAvailable(Ingredient ingredient) {
+		int total = countInContainers(ingredient);
+		if (this.craftSource != ConfigSchema.CRAFT_SOURCE_TERMINAL_ONLY) {
+			total += countInInventory(ingredient);
+		}
+		return total;
+	}
+
+	/** 按「合成取料来源」取指定数量的材料，返回实取到的栈（可能少于请求量）。 */
+	private ItemStack takeForIngredient(Ingredient ingredient, int count) {
+		ItemStack result = ItemStack.EMPTY;
+		int remaining = count;
+		if (this.craftSource == ConfigSchema.CRAFT_SOURCE_TERMINAL_FIRST) {
+			ItemStack taken = takeFromContainers(ingredient, remaining);
+			result = taken;
+			remaining -= taken.getCount();
+			if (remaining > 0) {
+				ItemStack fromInv = takeFromInventory(ingredient, remaining);
+				result = merge(result, fromInv);
+				remaining -= fromInv.getCount();
+			}
+		} else if (this.craftSource == ConfigSchema.CRAFT_SOURCE_INVENTORY_FIRST) {
+			ItemStack taken = takeFromInventory(ingredient, remaining);
+			result = taken;
+			remaining -= taken.getCount();
+			if (remaining > 0) {
+				ItemStack fromTerm = takeFromContainers(ingredient, remaining);
+				result = merge(result, fromTerm);
+			}
+		} else {
+			// 只用终端容器：不碰背包
+			result = takeFromContainers(ingredient, remaining);
+		}
+		if (!this.containers.isEmpty()) {
+			rebuildAggregatedItems();
+		}
+		return result;
+	}
+
+	private static ItemStack merge(ItemStack a, ItemStack b) {
+		if (a.isEmpty()) return b;
+		if (b.isEmpty()) return a;
+		ItemStack merged = a.copy();
+		merged.grow(b.getCount());
+		return merged;
+	}
+
+	private int countInContainers(Ingredient ingredient) {
+		int total = 0;
+		List<ItemStack> slots = new ArrayList<>();
+		for (ItemAccess access : this.containers) {
+			slots.clear();
+			ItemAccess.collectSlots(access, slots);
+			for (ItemStack stack : slots) {
+				if (!stack.isEmpty() && ingredient.test(stack)) {
+					total += stack.getCount();
+				}
+			}
+		}
+		return total;
+	}
+
+	private int countInInventory(Ingredient ingredient) {
+		Inventory inventory = this.player.getInventory();
+		int total = 0;
+		for (int i = 0; i < PLAYER_MAIN_SLOTS + PLAYER_HOTBAR_SLOTS; i++) {
+			ItemStack stack = inventory.getItem(i);
+			if (!stack.isEmpty() && ingredient.test(stack)) {
+				total += stack.getCount();
+			}
+		}
+		return total;
+	}
+
+	private ItemStack takeFromContainers(Ingredient ingredient, int count) {
+		ItemStack result = ItemStack.EMPTY;
+		int remaining = count;
+		List<ItemStack> slots = new ArrayList<>();
+		for (ItemAccess access : this.containers) {
+			if (remaining <= 0) break;
+			slots.clear();
+			ItemAccess.collectSlots(access, slots);
+			for (ItemStack stack : slots) {
+				if (remaining <= 0) break;
+				if (stack.isEmpty() || !ingredient.test(stack)) continue;
+				ItemStack taken = ItemAccess.extractMatching(access, stack, remaining);
+				if (taken.isEmpty()) continue;
+				result = merge(result, taken);
+				remaining -= taken.getCount();
+			}
+		}
+		return result;
+	}
+
+	private ItemStack takeFromInventory(Ingredient ingredient, int count) {
+		Inventory inventory = this.player.getInventory();
+		ItemStack result = ItemStack.EMPTY;
+		int remaining = count;
+		for (int i = 0; i < PLAYER_MAIN_SLOTS + PLAYER_HOTBAR_SLOTS && remaining > 0; i++) {
+			ItemStack stack = inventory.getItem(i);
+			if (stack.isEmpty() || !ingredient.test(stack)) continue;
+			int take = Math.min(remaining, stack.getCount());
+			ItemStack part = stack.split(take);
+			result = merge(result, part);
+			remaining -= take;
+		}
+		inventory.setChanged();
+		return result;
+	}
+
+	/**
+	 * 清空合成网格：去向按「清空去向」设置——背包优先或终端优先，两边都放不下才落地。
+	 * 也用于放置配方前腾地方、关界面时归还。
+	 */
+	public void clearCraftingGrid() {
+		List<ItemStack> leftovers = new ArrayList<>();
+		for (Slot slot : this.craftGridSlots) {
+			if (slot.hasItem()) {
+				leftovers.add(slot.remove(slot.getItem().getCount()));
+			}
+		}
+		this.resultSlots.setItem(0, ItemStack.EMPTY);
+		// 只有服务端负责把东西还回去：客户端这边清掉槽位就够了，否则会改动本地的容器副本。
+		for (ItemStack stack : leftovers) {
+			if (stack.isEmpty() || !(this.player instanceof ServerPlayer)) continue;
+			ItemStack remaining = stack;
+			if (this.clearDestination == ConfigSchema.CLEAR_DEST_TERMINAL) {
+				remaining = insertIntoContainers(remaining);
+				if (!remaining.isEmpty()) {
+					this.player.getInventory().add(remaining);
+					remaining = ItemStack.EMPTY;
+				}
+			} else {
+				ItemStack notStored = remaining.copy();
+				this.player.getInventory().add(notStored);
+				remaining = notStored;
+				if (!remaining.isEmpty()) {
+					remaining = insertIntoContainers(remaining);
+				}
+			}
+			if (!remaining.isEmpty()) {
+				this.player.drop(remaining, false, Prediction.PREDICTED);
+			}
+		}
+		if (this.player instanceof ServerPlayer serverPlayer) {
+			updateCraftingResult(null);
+			this.broadcastChanges();
+			Services.PLATFORM.sendToPlayer(serverPlayer,
+				TerminalItemsSyncPacket.fromItemStacks(this.aggregatedItems));
+		}
+	}
+
+	/** 关终端时把网格里的东西还回去（去向同上），绝不留在一个已关闭的菜单里。 */
 	@Override
 	public void removed(Player player) {
 		super.removed(player);
-		this.clearContainer(player, this.craftSlots);
+		clearCraftingGrid();
+	}
+
+	/** 配方书/合成判定的「可合成」提示要把终端物品也算进去。 */
+	@Override
+	public void fillCraftSlotsStackedContents(StackedItemContents contents) {
+		super.fillCraftSlotsStackedContents(contents);
+		for (ItemStack stack : this.aggregatedItems) {
+			if (!stack.isEmpty()) {
+				contents.accountSimpleStack(stack);
+			}
+		}
 	}
 
 	public void setScrollOffset(int offset) {
@@ -398,17 +664,7 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 		}
 		// 取出/存入后服务端同步回来的顺序未必仍是当前排序结果（数量变了、物品没了），
 		// 这里统一按当前条件再排一次。所有显示路径都经过本方法，排序不会再错乱。
-		displayedItems.sort((a, b) -> {
-			for (int i = 0; i < sortDirs.length; i++) {
-				SortDirection dir = sortDirs[i];
-				if (dir == SortDirection.NONE) continue;
-				int cmp = compareBy(a, b, i);
-				if (cmp != 0) {
-					return dir == SortDirection.ASC ? cmp : -cmp;
-				}
-			}
-			return 0;
-		});
+		displayedItems.sort(this::compare);
 	}
 
 	/** 把搜索串切成条件：空白分隔，双引号内不切（空条件已丢弃）。 */
@@ -594,17 +850,25 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 		Slot slot = this.slots.get(slotIndex);
 		if (!slot.hasItem()) return ItemStack.EMPTY;
 
-		// 合成网格：Shift 点击直接退回背包（与原版工作台一致，不会掉进容器里）
-		if (slotIndex >= CRAFT_SLOT_START && slotIndex < CRAFT_SLOT_END) {
-			ItemStack stack = slot.getItem();
-			this.moveItemStackTo(stack, PLAYER_INV_START, PLAYER_INV_END, true);
+		// 合成网格：Shift 点击按「清空去向」转移，与清空按键同一套规则
+		if (this.craftGridSlots.contains(slot)) {
+			ItemStack stack = slot.remove(slot.getItem().getCount());
+			if (this.clearDestination == ConfigSchema.CLEAR_DEST_TERMINAL) {
+				ItemStack remaining = insertIntoContainers(stack);
+				if (!remaining.isEmpty()) this.player.getInventory().add(remaining);
+			} else {
+				ItemStack remaining = stack.copy();
+				this.player.getInventory().add(remaining);
+				if (!remaining.isEmpty()) insertIntoContainers(remaining);
+			}
 			slot.setChanged();
 			this.broadcastChanges();
+			updateCraftingResult(null);
 			return ItemStack.EMPTY;
 		}
 
 		// 结果槽：背包放得下才取，取完由 ResultSlot.onTake 扣网格材料
-		if (slotIndex == RESULT_SLOT_INDEX) {
+		if (slot == this.craftResultSlot) {
 			return quickMoveCraftedResult(slot);
 		}
 
@@ -707,27 +971,27 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 			}
 		}
 		aggregatedItems.addAll(map.values());
-		// 多条件并列排序：按 sortDirs 顺序应用，遇到 NONE 跳过
-		aggregatedItems.sort((a, b) -> {
-			for (int i = 0; i < sortDirs.length; i++) {
-				SortDirection dir = sortDirs[i];
-				if (dir == SortDirection.NONE) continue;
-				int cmp = compareBy(a, b, i);
-				if (cmp != 0) {
-					return dir == SortDirection.ASC ? cmp : -cmp;
-				}
-			}
-			return 0;
-		});
+		aggregatedItems.sort(this::compare);
 		rebuildDisplayedItems();
+	}
+
+	/** 按「当前排序类型 + 方向」比较两个物品。 */
+	private int compare(ItemStack a, ItemStack b) {
+		int cmp = compareBy(a, b, this.sortMode);
+		if (cmp == 0) {
+			// 同值再用注册 ID 兜底，保证顺序稳定（不会在两次同步间抖动）
+			cmp = BuiltInRegistries.ITEM.getKey(a.getItem()).toString()
+				.compareTo(BuiltInRegistries.ITEM.getKey(b.getItem()).toString());
+		}
+		return sortAscending ? cmp : -cmp;
 	}
 
 	/** 按第 index 个条件比较两个物品（升序结果） */
 	private int compareBy(ItemStack a, ItemStack b, int index) {
 		switch (index) {
 			case 0: {
-				String na = a.getItem().getName(a).getString().toLowerCase();
-				String nb = b.getItem().getName(b).getString().toLowerCase();
+				String na = a.getItem().getName(a).getString().toLowerCase(Locale.ROOT);
+				String nb = b.getItem().getName(b).getString().toLowerCase(Locale.ROOT);
 				return na.compareTo(nb);
 			}
 			case 1:
@@ -809,81 +1073,66 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 	}
 	public List<TerminalSlot> getTerminalSlots() { return terminalSlots; }
 
-	// ===== 排序方向 API（多条件并列，各自独立切换 无→↑→↓→无）=====
-	public SortDirection getSortDir(int index) {
-		return sortDirs[index];
+	// ===== 排序 API（一个类型 + 一个方向）=====
+	public int getSortMode() {
+		return sortMode;
+	}
+
+	public boolean isSortAscending() {
+		return sortAscending;
 	}
 
 	public Component getSortName(int index) {
-		return Component.translatable(SORT_NAME_KEYS[index]);
+		return Component.translatable(SORT_NAME_KEYS[Math.floorMod(index, SORT_NAME_KEYS.length)]);
 	}
 
-	public int getSortCount() {
-		return sortDirs.length;
+	public int getSortModeCount() {
+		return SORT_NAME_KEYS.length;
 	}
 
-	public void cycleSortDir(int index) {
-		SortDirection cur = sortDirs[index];
-		// 单条件互斥：点击时先清除所有方向
-		for (int i = 0; i < sortDirs.length; i++) sortDirs[i] = SortDirection.NONE;
-		// 当前按钮两态切换：NONE→顺序(↑)，ASC→逆序(↓)，DESC→顺序(↑)
-		// 不会变回 NONE，只有点击其他按钮时本按钮才会被清除
-		sortDirs[index] = switch (cur) {
-			case NONE -> SortDirection.ASC;
-			case ASC -> SortDirection.DESC;
-			case DESC -> SortDirection.ASC;
-		};
-		// 基于已聚合的物品重新排序，避免从客户端容器重建导致物品消失
+	/** 点排序类型键：名称 → 数量 → ID → 模组 → 名称。 */
+	public void cycleSortMode() {
+		this.sortMode = (this.sortMode + 1) % SORT_NAME_KEYS.length;
 		resortAggregatedItems();
 		updateTerminalSlots();
-		// 持久化排序配置
+		saveSortConfig();
+	}
+
+	/** 点方向键：正序 ↔ 倒序。 */
+	public void toggleSortDirection() {
+		this.sortAscending = !this.sortAscending;
+		resortAggregatedItems();
+		updateTerminalSlots();
 		saveSortConfig();
 	}
 
 	/** 从配置文件加载排序设置（使用语言无关的 key） */
 	public void loadSortConfig() {
 		String config = ModConfig.sortConfig;
-		if (config == null || config.isEmpty()) return;
+		if (config == null || config.isEmpty()) {
+			return;
+		}
 		// 格式: "name:ASC" 或 "count:DESC"（语言无关）
 		String[] parts = config.split(":");
 		if (parts.length != 2) return;
 		for (int i = 0; i < SORT_PERSIST_KEYS.length; i++) {
 			if (SORT_PERSIST_KEYS[i].equals(parts[0])) {
-				// 先清掉内置默认（数量↓），否则默认项会和玩家真正选中的项一起显示为选中
-				for (int j = 0; j < sortDirs.length; j++) sortDirs[j] = SortDirection.NONE;
-				sortDirs[i] = SortDirection.valueOf(parts[1]);
-				break;
+				this.sortMode = i;
+				this.sortAscending = "ASC".equals(parts[1]);
+				return;
 			}
 		}
 	}
 
 	/** 保存当前排序设置到配置文件（使用语言无关的 key） */
 	private void saveSortConfig() {
-		for (int i = 0; i < sortDirs.length; i++) {
-			if (sortDirs[i] != SortDirection.NONE) {
-				ModConfig.sortConfig = SORT_PERSIST_KEYS[i] + ":" + sortDirs[i].name();
-				ModConfig.saveState();
-				return;
-			}
-		}
-		// 全部为 NONE 时清空配置
-		ModConfig.sortConfig = "";
+		ModConfig.sortConfig = SORT_PERSIST_KEYS[this.sortMode] + ":" + (sortAscending ? "ASC" : "DESC");
 		ModConfig.saveState();
 	}
 
 	/** 仅对已聚合的物品重新排序并刷新显示，不重新扫描容器 */
 	private void resortAggregatedItems() {
-		aggregatedItems.sort((a, b) -> {
-			for (int i = 0; i < sortDirs.length; i++) {
-				SortDirection dir = sortDirs[i];
-				if (dir == SortDirection.NONE) continue;
-				int cmp = compareBy(a, b, i);
-				if (cmp != 0) {
-					return dir == SortDirection.ASC ? cmp : -cmp;
-				}
-			}
-			return 0;
-		});
+		aggregatedItems.sort(this::compare);
 		rebuildDisplayedItems();
 	}
 
@@ -930,9 +1179,9 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 	/** 存入顺序：默认由近到远；也可配成由远到近或坐标升序。 */
 	private static void sortByInsertOrder(List<BlockPos> positions, BlockPos origin) {
 		String order = ModConfig.insertOrder;
-		if (com.portableterminal.config.ConfigSchema.ORDER_FARTHEST.equals(order)) {
+		if (ConfigSchema.ORDER_FARTHEST.equals(order)) {
 			positions.sort((a, b) -> Double.compare(b.distSqr(origin), a.distSqr(origin)));
-		} else if (com.portableterminal.config.ConfigSchema.ORDER_COORDINATES.equals(order)) {
+		} else if (ConfigSchema.ORDER_COORDINATES.equals(order)) {
 			positions.sort((a, b) -> {
 				int cmp = Integer.compare(a.getX(), b.getX());
 				if (cmp != 0) return cmp;

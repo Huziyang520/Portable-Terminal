@@ -49,7 +49,8 @@ public class PortableTerminalNeoForge {
 		// Server side handling is shared with Fabric, so it lives in the common packet records.
 		registrar.playToServer(OpenTerminalPacket.TYPE, OpenTerminalPacket.CODEC,
 			(payload, context) -> context.enqueueWork(() ->
-				OpenTerminalPacket.handleServer((ServerPlayer) context.player(), payload.rows())));
+				OpenTerminalPacket.handleServer((ServerPlayer) context.player(), payload.rows(),
+					payload.craftSource(), payload.clearDestination())));
 		registrar.playToServer(TerminalSlotClickPacket.TYPE, TerminalSlotClickPacket.CODEC,
 			(payload, context) -> context.enqueueWork(() ->
 				TerminalSlotClickPacket.handleServer((ServerPlayer) context.player(), payload)));

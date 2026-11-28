@@ -21,6 +21,26 @@ import net.neoforged.neoforge.transfer.item.ItemResource;
 
 public class NeoForgePlatformHelper implements IPlatformHelper {
 
+	/** 由客户端入口在拿到 ModContainer 之后注入；服务端不会用到。 */
+	private static java.util.function.Function<Object, Object> configScreenFactory;
+
+	public static void setConfigScreenFactory(java.util.function.Function<Object, Object> factory) {
+		configScreenFactory = factory;
+	}
+
+	@Override
+	public boolean openConfigScreen(Object parent) {
+		if (configScreenFactory == null) {
+			return false;
+		}
+		Object screen = configScreenFactory.apply(parent);
+		if (!(screen instanceof net.minecraft.client.gui.screens.Screen mcScreen)) {
+			return false;
+		}
+		net.minecraft.client.Minecraft.getInstance().setScreenAndShow(mcScreen);
+		return true;
+	}
+
 	@Override
 	public String getPlatformName() {
 		return "NeoForge";
