@@ -84,6 +84,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private static final int COL_THUMB         = 0xFFC6C6C6;
 	private static final int COL_HIGHLIGHT     = 0xFFFFFFFF;
 	private static final int COL_TEXT          = 0xFF404040;
+	private static final int COL_SCROLL_THUMB  = 0xFFC6C6C6;
+	private static final int COL_SCROLL_THUMB2 = 0xFF808080;
 
 	/** 合成带是否显示（来自客户端配置，打开界面时定死；改配置需要重开终端）。 */
 	private final boolean crafting;
@@ -482,16 +484,6 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		return this.cachedExclusionAreas;
 	}
 
-	/** 原版工作台那张 GUI 贴图：面板边框和合成箭头都直接取它的像素，观感与原版一致。 */
-	private static final Identifier VANILLA_CONTAINER =
-		Identifier.withDefaultNamespace("textures/gui/container/crafting_table.png");
-	/** 原版工作台合成箭头在贴图里的位置与尺寸。 */
-	private static final int VANILLA_ARROW_U = 90;
-	private static final int VANILLA_ARROW_V = 35;
-	/** 原版创造模式物品栏的滚动滑块（12×15）。 */
-	private static final Identifier VANILLA_SCROLLER =
-		Identifier.withDefaultNamespace("container/creative_inventory/scroller");
-
 	@Override
 	public void extractBackground(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
 		// 26.x 的 Screen.extractBackground 只做两件事：容器界面走 extractTransparentBackground（一层压暗
@@ -505,69 +497,75 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		this.lastMouseX = mouseX;
 		this.lastMouseY = mouseY;
 
+		Identifier sprite = this.crafting
+			? PortableTerminalLayout.PANEL_CRAFTING_SPRITE : PortableTerminalLayout.PANEL_SPRITE;
+		int srcW = PortableTerminalLayout.PANEL_SOURCE_WIDTH;
+		int srcH = this.crafting
+			? PortableTerminalLayout.PANEL_CRAFTING_SOURCE_HEIGHT : PortableTerminalLayout.PANEL_SOURCE_HEIGHT;
+		int footerSrcY = this.crafting
+			? PortableTerminalLayout.PANEL_FOOTER_CRAFTING_SRC_Y
+			: PortableTerminalLayout.PANEL_ROW_BAND_SRC_Y + SLOT_SIZE;
+		int headerH = PortableTerminalLayout.PANEL_HEADER_HEIGHT;
 		int x = this.leftPos;
 		int y = this.topPos;
 
-		// 面板只有「边框 + 纯色内衬」：竖向尺寸完全由行数算出来，不再拼接分段贴图，
-		// 所以行数/合成开关怎么变都不会留下接缝或多出来的分割线。
-		drawVanillaFrame(gfx, x, y, this.guiWidth, this.guiHeight);
+		// 同一张贴图分四段 1:1 贴：表头 / 一行槽位（按行数重复）/ 合成带 / 页脚。
+		// 不能用九宫格缩放：它会按目标高度的一半钳制每条边，页脚高于面板一半时中间带
+		// 会被取成长度不对的片段，格子与物品就会错位（行数越少越明显）。
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite,
+			srcW, srcH, 0, 0, x, y, this.guiWidth, headerH);
+		for (int row = 0; row < this.rows; row++) {
+			gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite,
+				srcW, srcH, 0, PortableTerminalLayout.PANEL_ROW_BAND_SRC_Y,
+				x, y + headerH + row * SLOT_SIZE, this.guiWidth, SLOT_SIZE);
+		}
+		if (this.crafting) {
+			gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite,
+				srcW, srcH, 0, PortableTerminalLayout.PANEL_CRAFT_BAND_SRC_Y,
+				x, y + PortableTerminalLayout.craftBandTop(this.rows),
+				this.guiWidth, PortableTerminalLayout.CRAFT_BAND_HEIGHT);
+		}
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite,
+			srcW, srcH, 0, footerSrcY,
+			x, y + PortableTerminalLayout.footerTop(this.rows, this.crafting),
+			this.guiWidth, PortableTerminalLayout.PANEL_FOOTER_HEIGHT);
 
-		// 副手槽在面板之外：同样的小面板边框 + 槽位底
+		// 副手槽在面板之外：原版圆角小面板外框 + 槽位底
 		int offX = x + PortableTerminalLayout.OFFHAND_X;
 		int offY = y + PortableTerminalLayout.offhandY(this.rows, this.crafting);
-		drawVanillaFrame(gfx, offX - 5, offY - 5, SLOT_SIZE + 8, SLOT_SIZE + 8);
+		drawFramePanel(gfx, offX - 5, offY - 5, SLOT_SIZE + 8, SLOT_SIZE + 8);
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.SLOT_SPRITE,
+			offX - 1, offY - 1, SLOT_SIZE, SLOT_SIZE);
 
-		// 所有槽位底逐个画原版槽位贴图（与原版容器里烤进背景的做法等价，但位置永远跟着布局走）
-		for (Slot slot : this.menu.slots) {
-			if (slot.x <= -1000 || slot.y <= -1000) {
-				continue;
-			}
-			gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.SLOT_SPRITE,
-				x + slot.x - 1, y + slot.y - 1, SLOT_SIZE, SLOT_SIZE);
-		}
-
-		if (this.crafting) {
-			gfx.blit(RenderPipelines.GUI_TEXTURED, VANILLA_CONTAINER,
-				x + PortableTerminalLayout.CRAFT_ARROW_X,
-				y + PortableTerminalLayout.craftBandTop(this.rows) + PortableTerminalLayout.CRAFT_ARROW_Y,
-				VANILLA_ARROW_U, VANILLA_ARROW_V,
-				PortableTerminalLayout.CRAFT_ARROW_WIDTH, PortableTerminalLayout.CRAFT_ARROW_HEIGHT, 256, 256);
-		}
-
-		drawScrollbar(gfx);
-	}
-
-	/**
-	 * 面板边框：四角与四条边都取原版容器贴图的 3px 边条，内部是纯色内衬。
-	 * 这样面板高度可以是任意值，不需要为每个行数各烤一张图。
-	 */
-	private void drawVanillaFrame(GuiGraphicsExtractor gfx, int x, int y, int w, int h) {
-		int srcW = PortableTerminalLayout.PANEL_SOURCE_WIDTH;
-		int srcH = PortableTerminalLayout.PANEL_SOURCE_HEIGHT;
-		Identifier sprite = PortableTerminalLayout.PANEL_SPRITE;
-		// 内部
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, srcW, srcH, 3, 3, x + 3, y + 3, w - 6, h - 6);
-		// 四条直边
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, srcW, srcH, 7, 0, x + 7, y, w - 14, 3);
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, srcW, srcH, 7, srcH - 3, x + 7, y + h - 3, w - 14, 3);
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, srcW, srcH, 0, 7, x, y + 7, 3, h - 14);
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, srcW, srcH, srcW - 3, 7, x + w - 3, y + 7, 3, h - 14);
-		// 四角（原版容器的 7×7 角块）
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, srcW, srcH, 0, 0, x, y, 7, 7);
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, srcW, srcH, srcW - 7, 0, x + w - 7, y, 7, 7);
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, srcW, srcH, 0, srcH - 7, x, y + h - 7, 7, 7);
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, srcW, srcH, srcW - 7, srcH - 7, x + w - 7, y + h - 7, 7, 7);
+		drawScrollbarThumb(gfx);
 	}
 
 	/**
 	 * 用面板贴图的边角，画一个带原版圆角边框的小面板（副手槽的外框）。
 	 * 全部取自同一张贴图，四角就是原版容器的 7×7 角块。
 	 */
+	private void drawFramePanel(GuiGraphicsExtractor gfx, int x, int y, int w, int h) {
+		int srcW = PortableTerminalLayout.PANEL_SOURCE_WIDTH;
+		int srcH = PortableTerminalLayout.PANEL_SOURCE_HEIGHT;
+		// 内部
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE,
+			srcW, srcH, 3, 3, x + 3, y + 3, w - 6, h - 6);
+		// 四条直边
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 7, 0, x + 7, y, w - 14, 3);
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 7, srcH - 3, x + 7, y + h - 3, w - 14, 3);
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, 7, x, y + 7, 3, h - 14);
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 3, 7, x + w - 3, y + 7, 3, h - 14);
+		// 四角
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, 0, x, y, 7, 7);
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 7, 0, x + w - 7, y, 7, 7);
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, 0, srcH - 7, x, y + h - 7, 7, 7);
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE, srcW, srcH, srcW - 7, srcH - 7, x + w - 7, y + h - 7, 7, 7);
+	}
+
 	/**
-	 * 滚动条：轨道是 1px 深色凹槽，滑块用原版创造模式物品栏那张 12×15 的滑块贴图。
-	 * 滑块高度固定、位置按比例算，永远落在轨道内（以前按比例改高度会画出轨道外）。
+	 * 滚动条：沿用原来的浅灰滑块，只把位置钳进轨道内（以前按比例算高度会滑出轨道下沿）。
 	 */
-	private void drawScrollbar(GuiGraphicsExtractor gfx) {
+	private void drawScrollbarThumb(GuiGraphicsExtractor gfx) {
 		int sx = this.leftPos + SCROLLBAR_LEFT;
 		int sy = this.topPos + SCROLLBAR_TOP;
 		int trackHeight = PortableTerminalLayout.scrollbarHeight(this.rows);
@@ -579,19 +577,17 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			scrollbarDirty = false;
 		}
 
-		// 轨道凹槽
-		gfx.fill(sx, sy, sx + SCROLLBAR_WIDTH, sy + trackHeight, COL_EDGE);
-		gfx.fill(sx + 1, sy + 1, sx + SCROLLBAR_WIDTH - 1, sy + trackHeight - 1, COL_THUMB);
-
-		int thumbH = Math.min(trackHeight - 2, 15);
-		int span = trackHeight - 2 - thumbH;
+		int inner = trackHeight - 2;
+		int thumbH = Math.min(inner, Math.max(SCROLL_THUMB_MIN, inner * this.rows / Math.max(1, cachedTotalRows)));
 		int thumbY = sy + 1;
-		if (cachedMaxScroll > 0 && span > 0) {
-			thumbY += span * cachedScrollOffset / cachedMaxScroll;
+		if (cachedMaxScroll > 0 && inner > thumbH) {
+			thumbY = sy + 1 + (inner - thumbH) * cachedScrollOffset / cachedMaxScroll;
 		}
+		// 钳制：滑块（含描边）不得越过轨道上下沿
 		thumbY = Math.max(sy + 1, Math.min(sy + trackHeight - 1 - thumbH, thumbY));
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, VANILLA_SCROLLER,
-			sx, thumbY, SCROLLBAR_WIDTH, thumbH);
+		gfx.fill(sx + 1, thumbY, sx + SCROLLBAR_WIDTH - 1, thumbY + thumbH, COL_SCROLL_THUMB);
+		gfx.fill(sx + SCROLLBAR_WIDTH - 2, thumbY, sx + SCROLLBAR_WIDTH - 1, thumbY + thumbH, COL_SCROLL_THUMB2);
+		gfx.fill(sx + 1, thumbY + thumbH - 1, sx + SCROLLBAR_WIDTH - 1, thumbY + thumbH, COL_SCROLL_THUMB2);
 	}
 
 	@Override

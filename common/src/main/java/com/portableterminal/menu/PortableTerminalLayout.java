@@ -58,27 +58,27 @@ public final class PortableTerminalLayout {
 	public static final int BUTTON_COUNT = 7;
 
 	// ==================== 合成带 ====================
-	/** 合成带高度：九宫格上方留出一行放「清空合成栏」按键，下面留 4px。 */
-	public static final int CRAFT_BAND_HEIGHT = 80;
+	/** 合成带高度：3 行槽位（54）+ 上下各 4px 留白。 */
+	public static final int CRAFT_BAND_HEIGHT = 62;
 	public static final int CRAFT_GRID_SIZE = 3;
 	public static final int CRAFT_SLOT_COUNT = CRAFT_GRID_SIZE * CRAFT_GRID_SIZE;
 	/** 网格 / 结果 / 箭头 / 配方书按钮 / 清空按键，坐标都相对合成带顶边。 */
 	public static final int CRAFT_GRID_X = 41;
-	public static final int CRAFT_GRID_Y = 22;
+	public static final int CRAFT_GRID_Y = 5;
 	public static final int CRAFT_RESULT_X = 120;
-	public static final int CRAFT_RESULT_Y = 40;
+	public static final int CRAFT_RESULT_Y = 23;
 	/** 箭头直接取原版工作台贴图里的那一块，尺寸与原版一致（22×15）。 */
 	public static final int CRAFT_ARROW_X = 96;
-	public static final int CRAFT_ARROW_Y = 43;
+	public static final int CRAFT_ARROW_Y = 25;
 	public static final int CRAFT_ARROW_WIDTH = 22;
 	public static final int CRAFT_ARROW_HEIGHT = 15;
 	public static final int RECIPE_BUTTON_X = 5;
 	public static final int RECIPE_BUTTON_Y = 22;
 	public static final int RECIPE_BUTTON_WIDTH = 20;
 	public static final int RECIPE_BUTTON_HEIGHT = 18;
-	/** 清空合成栏按键：九宫格右上角（贴着网格右缘、在网格上方）。 */
-	public static final int CLEAR_GRID_BTN_X = CRAFT_GRID_X + CRAFT_GRID_SIZE * SLOT_SIZE - BTN_SIZE;
-	public static final int CLEAR_GRID_BTN_Y = 2;
+	/** 清空合成栏按键：合成区右侧、贴上方。 */
+	public static final int CLEAR_GRID_BTN_X = 150;
+	public static final int CLEAR_GRID_BTN_Y = 4;
 
 	// ==================== 贴图 ====================
 	// GUI sprites (assets/portableterminal/textures/gui/sprites/).
@@ -92,10 +92,16 @@ public final class PortableTerminalLayout {
 	 * 中间带就会取到长度不对的片段，格子与物品错位，且行数越少越明显。</p>
 	 */
 	public static final Identifier PANEL_SPRITE = sprite("panel");
+	/** 带合成带的面板：同宽，竖向多一段 62px 的合成带（四段 1:1 切片）。 */
+	public static final Identifier PANEL_CRAFTING_SPRITE = sprite("panel_crafting");
 	/** 面板源图尺寸与分段（与两张 panel 贴图的实际像素一一对应）。 */
 	public static final int PANEL_SOURCE_WIDTH = 193;
 	public static final int PANEL_SOURCE_HEIGHT = 147;
 	public static final int PANEL_HEADER_HEIGHT = 31;
+	public static final int PANEL_ROW_BAND_SRC_Y = 31;
+	public static final int PANEL_CRAFT_BAND_SRC_Y = PANEL_ROW_BAND_SRC_Y + SLOT_SIZE;
+	public static final int PANEL_CRAFTING_SOURCE_HEIGHT = PANEL_SOURCE_HEIGHT + CRAFT_BAND_HEIGHT;
+	public static final int PANEL_FOOTER_CRAFTING_SRC_Y = PANEL_CRAFT_BAND_SRC_Y + CRAFT_BAND_HEIGHT;
 	public static final int PANEL_FOOTER_HEIGHT = 98;
 	public static final Identifier BUTTON_SPRITE = sprite("button");
 	/** 加行 / 减行按键：+/− 符号。 */
