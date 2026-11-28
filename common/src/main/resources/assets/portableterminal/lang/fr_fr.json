@@ -18,6 +18,8 @@
   "config.portableterminal.category.general": "Général",
   "config.portableterminal.master_switch": "Activer le terminal",
   "config.portableterminal.master_switch.tooltip": "Désactive tout le mod sur ce client",
+  "config.portableterminal.crafting_enabled": "Grille de fabrication",
+  "config.portableterminal.crafting_enabled.tooltip": "Affiche une grille de fabrication 3×3 avec le livre de recettes entre le terminal et l'inventaire",
   "config.portableterminal.scan_radius": "Rayon de recherche des conteneurs",
   "config.portableterminal.scan_radius.tooltip": "Distance à laquelle le terminal cherche les conteneurs (0-16)",
   "config.portableterminal.terminal_rows": "Lignes du terminal",

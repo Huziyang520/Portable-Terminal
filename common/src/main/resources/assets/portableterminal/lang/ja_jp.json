@@ -18,6 +18,8 @@
   "config.portableterminal.category.general": "一般",
   "config.portableterminal.master_switch": "端末を有効にする",
   "config.portableterminal.master_switch.tooltip": "オフにするとこのクライアントでMOD全体が無効になります",
+  "config.portableterminal.crafting_enabled": "作業台グリッド",
+  "config.portableterminal.crafting_enabled.tooltip": "端末とインベントリの間にレシピブック付きの 3×3 作業台グリッドを表示します",
   "config.portableterminal.scan_radius": "コンテナ検索範囲",
   "config.portableterminal.scan_radius.tooltip": "端末がコンテナを探す範囲（0-16）",
   "config.portableterminal.terminal_rows": "端末の表示行数",

@@ -4,8 +4,8 @@ import com.portableterminal.PortableTerminalMod;
 import net.minecraft.resources.Identifier;
 
 /**
- * Layout constants. Everything that depends on the terminal's row count is computed from it, so the
- * screen size (and the baked GUI sprite) always matches the slot grid.
+ * Layout constants. Everything that depends on the row count and on whether the crafting block is
+ * shown is computed here, so slot positions, screen size and the baked GUI sprites never drift apart.
  */
 public final class PortableTerminalLayout {
 
@@ -49,6 +49,23 @@ public final class PortableTerminalLayout {
 	public static final int ROWS_UP_BTN_Y = SORT_BTN_Y + SORT_BTN_COUNT * (BTN_SIZE + BTN_GAP) + 2;
 	public static final int ROWS_DOWN_BTN_Y = ROWS_UP_BTN_Y + BTN_SIZE + BTN_GAP;
 
+	// ==================== 合成带 ====================
+	/** 合成带高度：3 行槽位（54）+ 上下各 4px 留白。 */
+	public static final int CRAFT_BAND_HEIGHT = 62;
+	public static final int CRAFT_GRID_SIZE = 3;
+	public static final int CRAFT_SLOT_COUNT = CRAFT_GRID_SIZE * CRAFT_GRID_SIZE;
+	/** 网格 / 结果 / 箭头 / 配方书按钮，坐标都相对合成带顶边。 */
+	public static final int CRAFT_GRID_X = 41;
+	public static final int CRAFT_GRID_Y = 5;
+	public static final int CRAFT_RESULT_X = 120;
+	public static final int CRAFT_RESULT_Y = 23;
+	public static final int CRAFT_ARROW_X = 95;
+	public static final int CRAFT_ARROW_Y = 26;
+	public static final int RECIPE_BUTTON_X = 5;
+	public static final int RECIPE_BUTTON_Y = 22;
+	public static final int RECIPE_BUTTON_WIDTH = 20;
+	public static final int RECIPE_BUTTON_HEIGHT = 18;
+
 	// GUI sprites (assets/portableterminal/textures/gui/sprites/).
 	private static final String SPRITE_ROOT = "terminal/";
 	public static final Identifier SLOT_SPRITE = sprite("slot");
@@ -62,11 +79,18 @@ public final class PortableTerminalLayout {
 	 * 中间带就会取到长度不对的片段，格子与物品错位，且行数越少越明显。</p>
 	 */
 	public static final Identifier PANEL_SPRITE = sprite("panel");
-	/** 面板源图尺寸与分段（与 panel.png 的实际像素一一对应）。 */
+	/** 带合成带的面板：同样宽度，竖向多一段 62px 的合成带（四段 1:1 切片）。 */
+	public static final Identifier PANEL_CRAFTING_SPRITE = sprite("panel_crafting");
+	/** 面板源图尺寸与分段（与两张 panel 贴图的实际像素一一对应）。 */
 	public static final int PANEL_SOURCE_WIDTH = 193;
 	public static final int PANEL_SOURCE_HEIGHT = 147;
+	public static final int PANEL_CRAFTING_SOURCE_HEIGHT = PANEL_SOURCE_HEIGHT + CRAFT_BAND_HEIGHT;
 	public static final int PANEL_HEADER_HEIGHT = 31;
+	public static final int PANEL_ROW_BAND_SRC_Y = 31;
+	public static final int PANEL_CRAFT_BAND_SRC_Y = PANEL_ROW_BAND_SRC_Y + SLOT_SIZE;
 	public static final int PANEL_FOOTER_HEIGHT = 98;
+	/** 带合成带那张图里页脚的起始行。 */
+	public static final int PANEL_FOOTER_CRAFTING_SRC_Y = PANEL_CRAFT_BAND_SRC_Y + CRAFT_BAND_HEIGHT;
 	public static final Identifier BUTTON_SPRITE = sprite("button");
 	/** 加行 / 减行按键：+/− 符号。 */
 	public static final Identifier PLUS_SPRITE = sprite("plus");
@@ -98,29 +122,63 @@ public final class PortableTerminalLayout {
 		return COLS * rows;
 	}
 
-	public static int invTop(int rows) {
-		return TERM_TOP + rows * SLOT_SIZE + 14;
+	// ==================== 竖向分段 ====================
+
+	/** 槽位带顶边（表头之下）。 */
+	public static int rowsBandTop() {
+		return TERM_TOP;
 	}
 
-	public static int hotbarTop(int rows) {
-		return invTop(rows) + 3 * SLOT_SIZE + 4;
+	/** 合成带顶边；合成关闭时它就是页脚顶边。 */
+	public static int craftBandTop(int rows) {
+		return TERM_TOP + clampRows(rows) * SLOT_SIZE;
+	}
+
+	public static int footerTop(int rows, boolean crafting) {
+		return craftBandTop(rows) + (crafting ? CRAFT_BAND_HEIGHT : 0);
+	}
+
+	public static int invTop(int rows, boolean crafting) {
+		return footerTop(rows, crafting) + 14;
+	}
+
+	public static int hotbarTop(int rows, boolean crafting) {
+		return invTop(rows, crafting) + 3 * SLOT_SIZE + 4;
 	}
 
 	/** Offhand sits on the same row as the hotbar so both bottoms line up. */
-	public static int offhandY(int rows) {
-		return hotbarTop(rows);
+	public static int offhandY(int rows, boolean crafting) {
+		return hotbarTop(rows, crafting);
 	}
 
-	public static int imageHeight(int rows) {
-		return hotbarTop(rows) + SLOT_SIZE + PADDING;
+	public static int imageHeight(int rows, boolean crafting) {
+		return hotbarTop(rows, crafting) + SLOT_SIZE + PADDING;
 	}
 
 	public static int scrollbarHeight(int rows) {
-		return rows * SLOT_SIZE + 2;
+		return clampRows(rows) * SLOT_SIZE + 2;
 	}
 
 	public static int terminalAreaBottom(int rows) {
-		return TERM_TOP + rows * SLOT_SIZE;
+		return TERM_TOP + clampRows(rows) * SLOT_SIZE;
+	}
+
+	// ==================== 兼容旧调用（等同合成关闭） ====================
+
+	public static int invTop(int rows) {
+		return invTop(rows, false);
+	}
+
+	public static int hotbarTop(int rows) {
+		return hotbarTop(rows, false);
+	}
+
+	public static int offhandY(int rows) {
+		return offhandY(rows, false);
+	}
+
+	public static int imageHeight(int rows) {
+		return imageHeight(rows, false);
 	}
 
 	private PortableTerminalLayout() {

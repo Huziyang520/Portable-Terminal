@@ -18,6 +18,8 @@
   "config.portableterminal.category.general": "General",
   "config.portableterminal.master_switch": "Activar el terminal",
   "config.portableterminal.master_switch.tooltip": "Desactiva todo el mod en este cliente",
+  "config.portableterminal.crafting_enabled": "Cuadrícula de fabricación",
+  "config.portableterminal.crafting_enabled.tooltip": "Muestra una cuadrícula de fabricación 3×3 con el libro de recetas entre el terminal y el inventario",
   "config.portableterminal.scan_radius": "Radio de búsqueda de contenedores",
   "config.portableterminal.scan_radius.tooltip": "Hasta dónde busca contenedores el terminal (0-16)",
   "config.portableterminal.terminal_rows": "Filas del terminal",

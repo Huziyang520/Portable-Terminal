@@ -14,8 +14,10 @@ public final class ConfigSchema {
 	public static final String KEY_TERMINAL_ROWS = "terminal_rows";
 	public static final String KEY_BLACKLIST = "blacklist";
 	public static final String KEY_INSERT_ORDER = "insert_order";
+	public static final String KEY_CRAFTING = "crafting_enabled";
 
 	public static final boolean DEFAULT_MASTER_SWITCH = true;
+	public static final boolean DEFAULT_CRAFTING = true;
 	public static final String ORDER_NEAREST = "NEAREST";
 	public static final String ORDER_FARTHEST = "FARTHEST";
 	public static final String ORDER_COORDINATES = "COORDINATES";

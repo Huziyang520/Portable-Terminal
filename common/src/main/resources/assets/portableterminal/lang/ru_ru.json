@@ -18,6 +18,8 @@
   "config.portableterminal.category.general": "Общие",
   "config.portableterminal.master_switch": "Включить терминал",
   "config.portableterminal.master_switch.tooltip": "Отключает весь мод на этом клиенте",
+  "config.portableterminal.crafting_enabled": "Сетка крафта",
+  "config.portableterminal.crafting_enabled.tooltip": "Показывает сетку крафта 3×3 с книгой рецептов между терминалом и инвентарём",
   "config.portableterminal.scan_radius": "Радиус поиска контейнеров",
   "config.portableterminal.scan_radius.tooltip": "Насколько далеко терминал ищет контейнеры (0-16)",
   "config.portableterminal.terminal_rows": "Строки терминала",

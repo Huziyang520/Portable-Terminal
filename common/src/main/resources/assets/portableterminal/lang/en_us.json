@@ -18,6 +18,8 @@
   "config.portableterminal.category.general": "General",
   "config.portableterminal.master_switch": "Enable the terminal",
   "config.portableterminal.master_switch.tooltip": "Turning this off disables the whole mod on this client",
+  "config.portableterminal.crafting_enabled": "Crafting grid",
+  "config.portableterminal.crafting_enabled.tooltip": "Show a 3x3 crafting grid with the recipe book between the terminal and your inventory",
   "config.portableterminal.scan_radius": "Container scan radius",
   "config.portableterminal.scan_radius.tooltip": "How far the terminal looks for containers (0-16)",
   "config.portableterminal.terminal_rows": "Terminal rows",

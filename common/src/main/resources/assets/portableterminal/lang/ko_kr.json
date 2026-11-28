@@ -18,6 +18,8 @@
   "config.portableterminal.category.general": "일반",
   "config.portableterminal.master_switch": "터미널 사용",
   "config.portableterminal.master_switch.tooltip": "끄면 이 클라이언트에서 모드 전체가 비활성화됩니다",
+  "config.portableterminal.crafting_enabled": "제작 그리드",
+  "config.portableterminal.crafting_enabled.tooltip": "터미널과 인벤토리 사이에 레시피 북이 있는 3×3 제작 그리드를 표시합니다",
   "config.portableterminal.scan_radius": "컨테이너 탐색 범위",
   "config.portableterminal.scan_radius.tooltip": "터미널이 컨테이너를 찾는 범위 (0-16)",
   "config.portableterminal.terminal_rows": "터미널 표시 행 수",

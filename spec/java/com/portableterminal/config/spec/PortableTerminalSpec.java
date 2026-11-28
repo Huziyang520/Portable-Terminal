@@ -18,6 +18,7 @@ public final class PortableTerminalSpec {
 
 	public static final ModConfigSpec SPEC;
 	public static final ModConfigSpec.BooleanValue MASTER_SWITCH;
+	public static final ModConfigSpec.BooleanValue CRAFTING;
 	public static final ModConfigSpec.IntValue SCAN_RADIUS;
 	public static final ModConfigSpec.ConfigValue<List<? extends String>> BLACKLIST;
 	public static final ModConfigSpec.EnumValue<InsertOrder> INSERT_ORDER;
@@ -36,6 +37,12 @@ public final class PortableTerminalSpec {
 			.translation(ConfigSchema.translationKey(ConfigSchema.KEY_SCAN_RADIUS))
 			.defineInRange(ConfigSchema.KEY_SCAN_RADIUS, ConfigSchema.DEFAULT_SCAN_RADIUS,
 				ConfigSchema.MIN_SCAN_RADIUS, ConfigSchema.MAX_SCAN_RADIUS);
+
+		CRAFTING = builder
+			.comment("Shows a 3x3 crafting grid with the vanilla recipe book between the terminal",
+				"and the player inventory. Reopen the terminal after changing this.")
+			.translation(ConfigSchema.translationKey(ConfigSchema.KEY_CRAFTING))
+			.define(ConfigSchema.KEY_CRAFTING, ConfigSchema.DEFAULT_CRAFTING);
 
 		BLACKLIST = builder
 			.comment("Block ids the terminal ignores, for example minecraft:furnace.")
@@ -61,6 +68,7 @@ public final class PortableTerminalSpec {
 		if (!SPEC.isLoaded()) {
 			return;
 		}
-		ModConfig.applyAll(MASTER_SWITCH.get(), SCAN_RADIUS.get(), List.copyOf(BLACKLIST.get()), INSERT_ORDER.get().name());
+		ModConfig.applyAll(MASTER_SWITCH.get(), SCAN_RADIUS.get(), List.copyOf(BLACKLIST.get()), INSERT_ORDER.get().name(),
+			CRAFTING.get());
 	}
 }

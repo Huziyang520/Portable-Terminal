@@ -18,6 +18,8 @@
   "config.portableterminal.category.general": "通例",
   "config.portableterminal.master_switch": "啟終端",
   "config.portableterminal.master_switch.tooltip": "止之則本機盡廢此模",
+  "config.portableterminal.crafting_enabled": "製物之格",
+  "config.portableterminal.crafting_enabled.tooltip": "於終端與行囊之間列製物之格，並附配方之書",
   "config.portableterminal.scan_radius": "索器之域",
   "config.portableterminal.scan_radius.tooltip": "終端索器之遠近（0-16）",
   "config.portableterminal.terminal_rows": "終端行列",

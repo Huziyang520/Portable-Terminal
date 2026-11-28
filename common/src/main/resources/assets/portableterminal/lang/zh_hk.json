@@ -18,6 +18,8 @@
   "config.portableterminal.category.general": "一般",
   "config.portableterminal.master_switch": "啟用終端",
   "config.portableterminal.master_switch.tooltip": "熄咗就會喺本機完全停用呢個模組",
+  "config.portableterminal.crafting_enabled": "合成欄",
+  "config.portableterminal.crafting_enabled.tooltip": "在終端物品與背包之間顯示 3×3 合成欄和配方書",
   "config.portableterminal.scan_radius": "容器掃描半徑",
   "config.portableterminal.scan_radius.tooltip": "終端搜尋容器嘅範圍（0-16）",
   "config.portableterminal.terminal_rows": "終端顯示行數",

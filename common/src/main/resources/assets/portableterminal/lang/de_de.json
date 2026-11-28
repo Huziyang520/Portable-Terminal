@@ -18,6 +18,8 @@
   "config.portableterminal.category.general": "Allgemein",
   "config.portableterminal.master_switch": "Terminal aktivieren",
   "config.portableterminal.master_switch.tooltip": "Deaktiviert das gesamte Mod auf diesem Client",
+  "config.portableterminal.crafting_enabled": "Werkbank-Raster",
+  "config.portableterminal.crafting_enabled.tooltip": "Zeigt ein 3×3-Werkbankraster mit Rezeptbuch zwischen Terminal und Inventar",
   "config.portableterminal.scan_radius": "Suchradius für Container",
   "config.portableterminal.scan_radius.tooltip": "Wie weit das Terminal nach Containern sucht (0-16)",
   "config.portableterminal.terminal_rows": "Zeilen des Terminals",

@@ -10,13 +10,19 @@ import com.portableterminal.menu.PortableTerminalMenu;
 import com.portableterminal.network.TerminalSlotClickPacket;
 import com.portableterminal.platform.ClientSender;
 import com.mojang.blaze3d.platform.InputConstants;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.recipebook.CraftingRecipeBookComponent;
+import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
+import net.minecraft.client.gui.screens.recipebook.RecipeUpdateListener;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -25,8 +31,10 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.display.RecipeDisplay;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,17 +44,17 @@ import java.util.function.Supplier;
 /**
  * The terminal GUI.
  *
- * <p>Everything inside the panel — frame, slot wells and the scrollbar track — comes from a single
- * nine-sliced sprite ({@code terminal/panel}); its vertical center band is exactly one slot row and
- * repeats, so every row count renders crisply from one texture. Its four corners are literal copies
- * of vanilla's {@code generic_54.png} corners and the slot cells are vanilla's own
- * {@code container/slot.png}.</p>
+ * <p>面板贴图按「表头 / 一行槽位 / 合成带 / 页脚」四段 1:1 分片：槽位带按行数重复，合成带只在
+ * 合成功能开启时出现，因此同一套代码能画出任意行数、两种形态的界面。四角是原版
+ * {@code generic_54.png} 的逐像素拷贝，格子底图是原版 {@code container/slot.png} 原样。</p>
  *
- * <p>The six buttons on the left are drawn as square sprite buttons. Nothing is ever greyed out:
- * a sort field that is active is highlighted instead, and every button stays clickable at all
- * times.</p>
+ * <p>左侧六个方形按钮是自绘贴图按钮。没有禁用态：选中的排序项靠高亮贴图表意。</p>
+ *
+ * <p>合成带开启时挂原版 {@link CraftingRecipeBookComponent}：配方书按钮、面板右移避让、
+ * ghost 材料显示与「点配方自动摆放」全部走原版那一套。</p>
  */
-public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerminalMenu> {
+public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerminalMenu>
+	implements RecipeUpdateListener {
 
 	private static final int COLS = PortableTerminalLayout.COLS;
 	private static final int SLOT_SIZE = PortableTerminalLayout.SLOT_SIZE;
@@ -64,9 +72,19 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private static final int SEARCH_WIDTH = PortableTerminalLayout.SEARCH_WIDTH;
 	private static final int SEARCH_HEIGHT = PortableTerminalLayout.SEARCH_HEIGHT;
 
+	/** 配方书与面板之间留给左侧按钮列的空隙。 */
+	private static final int RECIPE_BOOK_GAP = 32;
+	/** 面板与屏幕边缘至少留这么多像素，行数按剩余高度自动截断。 */
+	private static final int SCREEN_MARGIN = 4;
+
 	private static final int COL_SCROLL_THUMB  = 0xFFC6C6C6;
 	private static final int COL_SCROLL_THUMB2 = 0xFF808080;
 	private static final int COL_TEXT          = 0xFF404040;
+
+	/** 合成带是否显示（来自客户端配置，打开界面时定死；改配置需要重开终端）。 */
+	private final boolean crafting;
+	private final CraftingRecipeBookComponent recipeBook;
+	private boolean widthTooNarrow;
 
 	private int rows;
 	private int guiWidth;
@@ -97,16 +115,23 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private final List<IconButton> sortButtons = new ArrayList<>();
 
 	public PortableTerminalScreen(PortableTerminalMenu menu, Inventory playerInventory, Component title) {
-		super(menu, playerInventory, title,
-			PortableTerminalLayout.IMAGE_WIDTH, PortableTerminalLayout.imageHeight(menu.getRows()));
-		this.rows = menu.getRows();
+		this(menu, playerInventory, title, ModConfig.craftingEnabled);
+	}
+
+	private PortableTerminalScreen(PortableTerminalMenu menu, Inventory playerInventory, Component title,
+			boolean crafting) {
+		super(menu, playerInventory, title, PortableTerminalLayout.IMAGE_WIDTH,
+			PortableTerminalLayout.imageHeight(menu.getRows(), crafting));
+		this.crafting = crafting;
+		this.recipeBook = new CraftingRecipeBookComponent(menu);
+		this.rows = PortableTerminalLayout.clampRows(menu.getRows());
 		this.guiWidth = PortableTerminalLayout.IMAGE_WIDTH;
-		this.guiHeight = PortableTerminalLayout.imageHeight(this.rows);
+		this.guiHeight = PortableTerminalLayout.imageHeight(this.rows, crafting);
 		this.cachedTotalRows = this.rows;
 		this.titleLabelX = PortableTerminalLayout.PADDING;
 		this.titleLabelY = 5;
 		this.inventoryLabelX = PortableTerminalLayout.PADDING;
-		this.inventoryLabelY = PortableTerminalLayout.invTop(this.rows) - 11;
+		this.inventoryLabelY = PortableTerminalLayout.invTop(this.rows, crafting) - 11;
 	}
 
 	// ==================== 初始化 ====================
@@ -115,8 +140,16 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	protected void init() {
 		super.init();
 		// 面板高度跟着显示行数走。26.x 的 imageHeight 是 final，不能改，所以自己按 guiHeight 居中。
-		this.guiHeight = PortableTerminalLayout.imageHeight(this.rows);
+		this.rows = Math.min(this.rows, maxRowsForScreen());
+		this.menu.applyViewLayout(this.rows, this.crafting);
+		this.guiHeight = PortableTerminalLayout.imageHeight(this.rows, this.crafting);
+		this.inventoryLabelY = PortableTerminalLayout.invTop(this.rows, this.crafting) - 11;
 		this.topPos = (this.height - this.guiHeight) / 2;
+
+		this.widthTooNarrow = this.width < 379;
+		this.recipeBook.init(this.width, this.height, this.minecraft, this.widthTooNarrow);
+		this.addWidget(this.recipeBook);
+		this.leftPos = recipeBookScreenLeft();
 
 		// 打开界面即接管服务器同步包；关闭时归还（见 onClose）
 		PortableTerminalClient.setSyncReceiver(this::onItemsSynced);
@@ -135,8 +168,50 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		this.searchBox.setResponder(this::onSearchChanged);
 		this.addRenderableWidget(this.searchBox);
 
+		addRecipeBookButton();
 		createButtons();
 		this.menu.updateTerminalSlots();
+	}
+
+	/**
+	 * 行数上限按屏幕高度算：整块面板（表头 + 槽位带 + 合成带 + 页脚）不得超出屏幕，
+	 * 否则会把背包行裁掉。下限仍是 3 行。
+	 */
+	private int maxRowsForScreen() {
+		int fixed = PortableTerminalLayout.imageHeight(0, this.crafting) + SCREEN_MARGIN * 2;
+		int fit = (this.height - fixed) / SLOT_SIZE;
+		return Math.max(PortableTerminalLayout.MIN_ROWS,
+			Math.min(PortableTerminalLayout.MAX_ROWS, fit));
+	}
+
+	/** 配方书打开且屏幕够宽时面板整体右移，给书与左侧按钮列让出位置。 */
+	private int recipeBookScreenLeft() {
+		if (this.recipeBook.isVisible() && !this.widthTooNarrow) {
+			int shifted = this.recipeBook.updateScreenPosition(this.width, this.guiWidth) + RECIPE_BOOK_GAP;
+			return Math.min(shifted, this.width - this.guiWidth);
+		}
+		return (this.width - this.guiWidth) / 2;
+	}
+
+	/** 配方书按钮贴在合成带左端（与工作台一样靠左）；关闭合成时挪出屏幕。 */
+	private ScreenPosition recipeBookButtonPosition() {
+		if (!this.crafting) {
+			return new ScreenPosition(-10000, -10000);
+		}
+		int bandTop = this.topPos + PortableTerminalLayout.craftBandTop(this.rows);
+		return new ScreenPosition(this.leftPos + PortableTerminalLayout.RECIPE_BUTTON_X,
+			bandTop + PortableTerminalLayout.RECIPE_BUTTON_Y);
+	}
+
+	private void addRecipeBookButton() {
+		ScreenPosition pos = recipeBookButtonPosition();
+		this.addRenderableWidget(new ImageButton(pos.x(), pos.y(),
+			PortableTerminalLayout.RECIPE_BUTTON_WIDTH, PortableTerminalLayout.RECIPE_BUTTON_HEIGHT,
+			RecipeBookComponent.RECIPE_BUTTON_SPRITES, button -> {
+				this.recipeBook.toggleVisibility();
+				// 面板位置、搜索框、左侧按钮、配方书按钮全都跟着书的状态走，重建一次最稳。
+				this.rebuildWidgets();
+			}));
 	}
 
 	private void createButtons() {
@@ -202,17 +277,19 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	 * 把光标挪到窗口正中，那不是按键该有的行为。</p>
 	 */
 	private void changeRows(int delta) {
-		int next = PortableTerminalLayout.clampRows(this.rows + delta);
+		int next = Math.max(PortableTerminalLayout.MIN_ROWS,
+			Math.min(maxRowsForScreen(), PortableTerminalLayout.clampRows(this.rows + delta)));
 		if (next == this.rows) {
 			return;
 		}
 		this.rows = next;
 		this.scrollbarDirty = true;
 		ModConfig.setRows(next);
-		this.menu.applyViewRows(next);
-		this.guiHeight = PortableTerminalLayout.imageHeight(this.rows);
+		this.menu.applyViewLayout(next, this.crafting);
+		this.guiHeight = PortableTerminalLayout.imageHeight(this.rows, this.crafting);
+		this.inventoryLabelY = PortableTerminalLayout.invTop(next, this.crafting) - 11;
 		this.topPos = (this.height - this.guiHeight) / 2;
-		this.inventoryLabelY = PortableTerminalLayout.invTop(next) - 11;
+		this.leftPos = recipeBookScreenLeft();
 		this.rebuildWidgets();
 	}
 
@@ -235,6 +312,40 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		super.onClose();
 	}
 
+	// ==================== 配方书 ====================
+
+	@Override
+	public void recipesUpdated() {
+		this.recipeBook.recipesUpdated();
+	}
+
+	@Override
+	public void fillGhostRecipe(RecipeDisplay display) {
+		this.recipeBook.fillGhostRecipe(display);
+	}
+
+	@Override
+	protected void containerTick() {
+		super.containerTick();
+		this.recipeBook.tick();
+	}
+
+	@Override
+	protected void slotClicked(Slot slot, int slotId, int buttonNum, ContainerInput containerInput) {
+		super.slotClicked(slot, slotId, buttonNum, containerInput);
+		this.recipeBook.slotClicked(slot);
+	}
+
+	@Override
+	public boolean isInputCaptured() {
+		return super.isInputCaptured() || this.recipeBook.capturesInput();
+	}
+
+	@Override
+	public boolean charTyped(CharacterEvent event) {
+		return this.recipeBook.charTyped(event) || super.charTyped(event);
+	}
+
 	@Override
 	public boolean keyPressed(KeyEvent event) {
 		if (this.searchBox != null && this.getFocused() == this.searchBox) {
@@ -246,26 +357,51 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			this.searchBox.keyPressed(event);
 			return true;
 		}
+		// 配方书自己的搜索框与「ESC 关书」先处理，剩下的才交回原版（含 ESC 关界面）
+		if (this.recipeBook.keyPressed(event)) {
+			return true;
+		}
 		return super.keyPressed(event);
 	}
 
-	// ==================== 背景：九宫格面板贴图 ====================
+	@Override
+	protected boolean isHovering(int left, int top, int w, int h, double xm, double ym) {
+		// 屏幕太窄时配方书压住面板，此时面板上的槽位不该再响应悬停
+		return (!this.widthTooNarrow || !this.recipeBook.isVisible())
+			&& super.isHovering(left, top, w, h, xm, ym);
+	}
+
+	@Override
+	protected boolean hasClickedOutside(double mx, double my, int xo, int yo) {
+		boolean outside = mx < xo || my < yo || mx >= xo + this.guiWidth || my >= yo + this.guiHeight;
+		return this.recipeBook.hasClickedOutside(mx, my, this.leftPos, this.topPos, this.guiWidth, this.guiHeight)
+			&& outside;
+	}
+
+	// ==================== 背景：四段面板贴图 ====================
 
 	/**
-	 * 外部 UI（JEI）需要避让的区域，屏幕坐标系：面板本身，以及面板左侧那一列（排序/行数按钮 + 副手槽）。
+	 * 外部 UI（JEI）需要避让的区域，屏幕坐标系：面板本身、面板左侧那一列（排序/行数按钮 + 副手槽），
+	 * 以及打开着的配方书。
 	 */
 	public List<Rect2i> getExclusionAreas() {
 		List<Rect2i> areas = new ArrayList<>();
 		areas.add(new Rect2i(this.leftPos, this.topPos, this.guiWidth, this.guiHeight));
 		int colLeft = this.leftPos + PortableTerminalLayout.SORT_BTN_X;
-		int colTop = this.topPos + PortableTerminalLayout.TERM_TOP;
+		int colTop = this.topPos + PortableTerminalLayout.SORT_BTN_Y;
 		int colRight = this.leftPos + Math.max(
 			PortableTerminalLayout.SORT_BTN_X + PortableTerminalLayout.BTN_SIZE,
 			PortableTerminalLayout.OFFHAND_X + SLOT_SIZE);
 		int colBottom = this.topPos + Math.max(
 			PortableTerminalLayout.ROWS_DOWN_BTN_Y + PortableTerminalLayout.BTN_SIZE,
-			PortableTerminalLayout.offhandY(this.rows) + SLOT_SIZE);
+			PortableTerminalLayout.offhandY(this.rows, this.crafting) + SLOT_SIZE);
 		areas.add(new Rect2i(colLeft, colTop, colRight - colLeft, colBottom - colTop));
+		if (this.recipeBook.isVisible()) {
+			int bookLeft = this.leftPos - RECIPE_BOOK_GAP - RecipeBookComponent.IMAGE_WIDTH;
+			int bookTop = (this.height - RecipeBookComponent.IMAGE_HEIGHT) / 2;
+			areas.add(new Rect2i(bookLeft, bookTop,
+				RecipeBookComponent.IMAGE_WIDTH, RecipeBookComponent.IMAGE_HEIGHT));
+		}
 		return areas;
 	}
 
@@ -281,28 +417,42 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		Minecraft.getInstance().gui.hud.extractDeferredSubtitles();
 		this.lastMouseX = mouseX;
 		this.lastMouseY = mouseY;
+
+		Identifier sprite = this.crafting
+			? PortableTerminalLayout.PANEL_CRAFTING_SPRITE : PortableTerminalLayout.PANEL_SPRITE;
 		int srcW = PortableTerminalLayout.PANEL_SOURCE_WIDTH;
-		int srcH = PortableTerminalLayout.PANEL_SOURCE_HEIGHT;
-		int headerH = PortableTerminalLayout.PANEL_HEADER_HEIGHT;
+		int srcH = this.crafting
+			? PortableTerminalLayout.PANEL_CRAFTING_SOURCE_HEIGHT : PortableTerminalLayout.PANEL_SOURCE_HEIGHT;
+		int footerSrcY = this.crafting
+			? PortableTerminalLayout.PANEL_FOOTER_CRAFTING_SRC_Y : PortableTerminalLayout.PANEL_ROW_BAND_SRC_Y + SLOT_SIZE;
 		int x = this.leftPos;
 		int y = this.topPos;
 
-		// 同一张贴图分三段 1:1 贴：表头 / 一行槽位（按行数重复）/ 页脚。
+		// 同一张贴图分四段 1:1 贴：表头 / 一行槽位（按行数重复）/ 合成带 / 页脚。
 		// 不能用九宫格缩放：它会按目标高度的一半钳制每条边，页脚高于面板一半时中间带
 		// 会被取成长度不对的片段，格子与物品就会错位（行数越少越明显）。
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE,
-			srcW, srcH, 0, 0, x, y, this.guiWidth, headerH);
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite,
+			srcW, srcH, 0, 0, x, y, this.guiWidth, PortableTerminalLayout.PANEL_HEADER_HEIGHT);
 		for (int row = 0; row < this.rows; row++) {
-			gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE,
-				srcW, srcH, 0, headerH, x, y + headerH + row * SLOT_SIZE, this.guiWidth, SLOT_SIZE);
+			gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite,
+				srcW, srcH, 0, PortableTerminalLayout.PANEL_ROW_BAND_SRC_Y,
+				x, y + PortableTerminalLayout.PANEL_HEADER_HEIGHT + row * SLOT_SIZE,
+				this.guiWidth, SLOT_SIZE);
 		}
-		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.PANEL_SPRITE,
-			srcW, srcH, 0, headerH + SLOT_SIZE,
-			x, y + headerH + this.rows * SLOT_SIZE, this.guiWidth, PortableTerminalLayout.PANEL_FOOTER_HEIGHT);
+		if (this.crafting) {
+			gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite,
+				srcW, srcH, 0, PortableTerminalLayout.PANEL_CRAFT_BAND_SRC_Y,
+				x, y + PortableTerminalLayout.craftBandTop(this.rows),
+				this.guiWidth, PortableTerminalLayout.CRAFT_BAND_HEIGHT);
+		}
+		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite,
+			srcW, srcH, 0, footerSrcY,
+			x, y + PortableTerminalLayout.footerTop(this.rows, this.crafting),
+			this.guiWidth, PortableTerminalLayout.PANEL_FOOTER_HEIGHT);
 
 		// 副手槽在面板之外：原版圆角小面板外框 + 槽位底
 		int offX = x + PortableTerminalLayout.OFFHAND_X;
-		int offY = y + PortableTerminalLayout.offhandY(this.rows);
+		int offY = y + PortableTerminalLayout.offhandY(this.rows, this.crafting);
 		drawFramePanel(gfx, offX - 5, offY - 5, SLOT_SIZE + 8, SLOT_SIZE + 8);
 		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.SLOT_SPRITE,
 			offX - 1, offY - 1, SLOT_SIZE, SLOT_SIZE);
@@ -357,6 +507,29 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	}
 
 	@Override
+	public void extractRenderState(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
+		// 与 AbstractRecipeBookScreen 同一顺序：内容 → 配方书 → 手持物品 → 提示框（含 ghost）
+		if (this.recipeBook.isVisible() && this.widthTooNarrow) {
+			this.extractBackground(gfx, mouseX, mouseY, partialTick);
+		} else {
+			this.extractContents(gfx, mouseX, mouseY, partialTick);
+		}
+		gfx.nextStratum();
+		this.recipeBook.extractRenderState(gfx, mouseX, mouseY, partialTick);
+		gfx.nextStratum();
+		this.extractCarriedItem(gfx, mouseX, mouseY);
+		this.extractTooltip(gfx, mouseX, mouseY);
+		this.recipeBook.extractTooltip(gfx, mouseX, mouseY, this.hoveredSlot);
+	}
+
+	@Override
+	protected void extractSlots(GuiGraphicsExtractor gfx, int mouseX, int mouseY) {
+		super.extractSlots(gfx, mouseX, mouseY);
+		// 配方书点过配方后，在网格上叠一层半透明材料提示
+		this.recipeBook.extractGhostRecipe(gfx, false);
+	}
+
+	@Override
 	public void extractLabels(GuiGraphicsExtractor gfx, int mouseX, int mouseY) {
 		gfx.text(this.font, this.title, this.titleLabelX, this.titleLabelY, COL_TEXT, false);
 		gfx.text(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, COL_TEXT, false);
@@ -374,6 +547,21 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		boolean hasShift = event.hasShiftDown()
 			|| InputConstants.isKeyDown(InputConstants.KEY_LSHIFT)
 			|| InputConstants.isKeyDown(InputConstants.KEY_RSHIFT);
+
+		if (this.recipeBook.isVisible()) {
+			if (this.recipeBook.mouseClicked(event, inside)) {
+				this.setFocused(this.recipeBook);
+				return true;
+			}
+			if (this.widthTooNarrow) {
+				// 书压住整个面板：除书以外的地方不再响应
+				return true;
+			}
+			// 书左边的空白一并吞掉，别穿透到面板外的按钮
+			if (mouseX < this.leftPos - RECIPE_BOOK_GAP) {
+				return true;
+			}
+		}
 
 		if (isInSearchBox(mouseX, mouseY)) {
 			this.setFocused(this.searchBox);
@@ -438,6 +626,9 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+		if (this.recipeBook.mouseDragged(event, dragX, dragY)) {
+			return true;
+		}
 		if (draggingScrollbar) {
 			scrollToMouse(event.y());
 			return true;
@@ -538,8 +729,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	/**
 	 * 左侧的方块贴图按钮。
 	 *
-	 * <p>只画自己的贴图：底图 + 可选箭头 + 可选选中高亮。永不禁用（{@code active} 一直为 true），
-	 * 因此不存在"置灰"外观；被选中的排序项改用高亮贴图表意。也没有任何悬浮提示。</p>
+	 * <p>只画自己的贴图：底图 + 可选角标 + 可选选中高亮。永不禁用（{@code active} 一直为 true），
+	 * 因此不存在"置灰"外观；被选中的排序项改用高亮贴图表意。</p>
 	 */
 	private class IconButton extends AbstractButton {
 		private final Supplier<Identifier> arrow;

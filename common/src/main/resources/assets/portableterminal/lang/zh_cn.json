@@ -18,6 +18,8 @@
   "config.portableterminal.category.general": "通用",
   "config.portableterminal.master_switch": "启用终端",
   "config.portableterminal.master_switch.tooltip": "关闭后本客户端完全禁用该模组",
+  "config.portableterminal.crafting_enabled": "合成栏",
+  "config.portableterminal.crafting_enabled.tooltip": "在终端物品与背包之间显示 3×3 合成栏和配方书",
   "config.portableterminal.scan_radius": "容器扫描半径",
   "config.portableterminal.scan_radius.tooltip": "终端搜索容器的范围（0-16）",
   "config.portableterminal.terminal_rows": "终端显示行数",

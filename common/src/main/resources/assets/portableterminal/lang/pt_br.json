@@ -18,6 +18,8 @@
   "config.portableterminal.category.general": "Geral",
   "config.portableterminal.master_switch": "Ativar o terminal",
   "config.portableterminal.master_switch.tooltip": "Desativa todo o mod neste cliente",
+  "config.portableterminal.crafting_enabled": "Grade de criação",
+  "config.portableterminal.crafting_enabled.tooltip": "Mostra uma grade de criação 3×3 com o livro de receitas entre o terminal e o inventário",
   "config.portableterminal.scan_radius": "Raio de busca de contêineres",
   "config.portableterminal.scan_radius.tooltip": "Até onde o terminal procura contêineres (0-16)",
   "config.portableterminal.terminal_rows": "Linhas do terminal",

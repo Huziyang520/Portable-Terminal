@@ -26,6 +26,7 @@ public final class ModConfig {
 
 	public static volatile int scanRadius = ConfigSchema.DEFAULT_SCAN_RADIUS;
 	public static volatile boolean masterSwitch = ConfigSchema.DEFAULT_MASTER_SWITCH;
+	public static volatile boolean craftingEnabled = ConfigSchema.DEFAULT_CRAFTING;
 	public static volatile int terminalRows = ConfigSchema.DEFAULT_TERMINAL_ROWS;
 	public static volatile String sortConfig = "";
 	public static volatile String insertOrder = ConfigSchema.DEFAULT_INSERT_ORDER;
@@ -40,8 +41,9 @@ public final class ModConfig {
 	}
 
 	/** spec 载入/重载后把值刷进快照；缺项落回登记表默认值并夹到范围内。 */
-	public static void applyAll(boolean master, int radius, List<String> blacklist, String order) {
+	public static void applyAll(boolean master, int radius, List<String> blacklist, String order, boolean crafting) {
 		masterSwitch = master;
+		craftingEnabled = crafting;
 		insertOrder = order != null ? order : ConfigSchema.DEFAULT_INSERT_ORDER;
 		scanRadius = Math.max(ConfigSchema.MIN_SCAN_RADIUS, Math.min(ConfigSchema.MAX_SCAN_RADIUS, radius));
 		BLACKLIST.clear();
