@@ -244,15 +244,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			}));
 	}
 
-	/**
-	 * 「清空合成栏」按键。当前不挂到界面上：合成区右侧那个位置用户否掉了，
-	 * 新位置（九宫格内）还要确认，先只保留实现。
-	 */
+	/** 九宫格右上格右边的「清空合成栏」按键。 */
 	private void addClearGridButton() {
-		return;
-	}
-
-	private void addClearGridButtonImpl() {
 		if (!this.crafting) {
 			return;
 		}

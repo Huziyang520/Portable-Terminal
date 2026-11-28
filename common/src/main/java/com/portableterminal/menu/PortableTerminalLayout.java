@@ -77,9 +77,9 @@ public final class PortableTerminalLayout {
 	public static final int RECIPE_BUTTON_Y = 22;
 	public static final int RECIPE_BUTTON_WIDTH = 20;
 	public static final int RECIPE_BUTTON_HEIGHT = 18;
-	/** 清空合成栏按键：合成区右侧、贴上方。 */
-	public static final int CLEAR_GRID_BTN_X = 150;
-	public static final int CLEAR_GRID_BTN_Y = 4;
+	/** 清空合成栏按键：九宫格右上格的右边（与九宫格顶行对齐）。 */
+	public static final int CLEAR_GRID_BTN_X = CRAFT_GRID_X + CRAFT_GRID_SIZE * SLOT_SIZE + 1;
+	public static final int CLEAR_GRID_BTN_Y = CRAFT_GRID_Y;
 
 	// ==================== 贴图 ====================
 	// GUI sprites (assets/portableterminal/textures/gui/sprites/).
