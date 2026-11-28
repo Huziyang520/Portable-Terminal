@@ -20,7 +20,8 @@ import java.util.List;
  * {@code craftSource} / {@code clearDestination} 是客户端偏好，但配方摆放与清空网格都在服务端执行，
  * 所以也要一起带上，否则服务端不知道新材料该从终端取还是从背包取。</p>
  */
-public record OpenTerminalPacket(int rows, int craftSource, int clearDestination) implements CustomPacketPayload {
+public record OpenTerminalPacket(int rows, int craftSource, int clearDestination, boolean crafting)
+	implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<OpenTerminalPacket> TYPE =
 		new CustomPacketPayload.Type<>(Identifier.tryBuild("portableterminal", "open_terminal"));
 
@@ -29,8 +30,9 @@ public record OpenTerminalPacket(int rows, int craftSource, int clearDestination
 			buf.writeByte(PortableTerminalLayout.clampRows(packet.rows()));
 			buf.writeByte(packet.craftSource());
 			buf.writeByte(packet.clearDestination());
+			buf.writeBoolean(packet.crafting());
 		},
-		buf -> new OpenTerminalPacket(buf.readByte(), buf.readByte(), buf.readByte())
+		buf -> new OpenTerminalPacket(buf.readByte(), buf.readByte(), buf.readByte(), buf.readBoolean())
 	);
 
 	@Override
@@ -39,7 +41,8 @@ public record OpenTerminalPacket(int rows, int craftSource, int clearDestination
 	}
 
 	/** Server side handling; invoked by the loader's packet bootstrap. */
-	public static void handleServer(ServerPlayer player, int rows, int craftSource, int clearDestination) {
+	public static void handleServer(ServerPlayer player, int rows, int craftSource, int clearDestination,
+			boolean crafting) {
 		int clampedRows = PortableTerminalLayout.clampRows(rows);
 		List<BlockPos> containers = PortableTerminalMenu.scanNearbyContainers(player);
 
@@ -56,7 +59,7 @@ public record OpenTerminalPacket(int rows, int craftSource, int clearDestination
 		if (player.containerMenu instanceof PortableTerminalMenu) {
 			player.doCloseContainer();
 		}
-		player.openMenu(new PortableTerminalMenuProvider(containers, clampedRows, craftSource, clearDestination));
+		player.openMenu(new PortableTerminalMenuProvider(containers, clampedRows, craftSource, clearDestination, crafting));
 
 		if (player.containerMenu instanceof PortableTerminalMenu psm) {
 			psm.rebuildAggregatedItems();
@@ -69,18 +72,23 @@ public record OpenTerminalPacket(int rows, int craftSource, int clearDestination
 		private final int rows;
 		private final int craftSource;
 		private final int clearDestination;
+		private final boolean crafting;
 
-		public PortableTerminalMenuProvider(List<BlockPos> containers, int rows, int craftSource, int clearDestination) {
+		public PortableTerminalMenuProvider(List<BlockPos> containers, int rows, int craftSource, int clearDestination,
+				boolean crafting) {
 			this.containers = containers;
 			this.rows = rows;
 			this.craftSource = craftSource;
 			this.clearDestination = clearDestination;
+			this.crafting = crafting;
 		}
 
 		@Override
 		public PortableTerminalMenu createMenu(int containerId, net.minecraft.world.entity.player.Inventory inventory, net.minecraft.world.entity.player.Player player) {
 			PortableTerminalMenu menu = new PortableTerminalMenu(containerId, inventory, containers, rows);
 			menu.setCraftingModes(craftSource, clearDestination);
+			// 服务端也要知道合成带是否显示：关掉时不能往看不见的格子里摆配方
+			menu.applyViewLayout(rows, crafting);
 			return menu;
 		}
 

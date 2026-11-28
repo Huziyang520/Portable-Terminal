@@ -50,7 +50,7 @@ public class PortableTerminalNeoForge {
 		registrar.playToServer(OpenTerminalPacket.TYPE, OpenTerminalPacket.CODEC,
 			(payload, context) -> context.enqueueWork(() ->
 				OpenTerminalPacket.handleServer((ServerPlayer) context.player(), payload.rows(),
-					payload.craftSource(), payload.clearDestination())));
+					payload.craftSource(), payload.clearDestination(), payload.crafting())));
 		registrar.playToServer(TerminalSlotClickPacket.TYPE, TerminalSlotClickPacket.CODEC,
 			(payload, context) -> context.enqueueWork(() ->
 				TerminalSlotClickPacket.handleServer((ServerPlayer) context.player(), payload)));

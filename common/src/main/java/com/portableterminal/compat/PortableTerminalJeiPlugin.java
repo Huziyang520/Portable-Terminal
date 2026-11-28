@@ -95,7 +95,8 @@ public class PortableTerminalJeiPlugin implements IModPlugin {
 
 		@Override
 		public List<Slot> getInventorySlots(PortableTerminalMenu menu, RecipeHolder<CraftingRecipe> recipe) {
-			return menu.slots.subList(PortableTerminalMenu.PLAYER_INV_START, PortableTerminalMenu.PLAYER_INV_END);
+			int end = Math.min(PortableTerminalMenu.PLAYER_INV_END, menu.slots.size());
+			return menu.slots.subList(PortableTerminalMenu.PLAYER_INV_START, end);
 		}
 	}
 }

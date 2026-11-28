@@ -61,6 +61,6 @@ public class PortableTerminalClient {
 
 		// 行数随包发出去：服务端据此建菜单，两端槽位布局才一致。
 		ClientSender.sendToServer(new OpenTerminalPacket(ModConfig.terminalRows,
-			ModConfig.craftSource, ModConfig.clearDestination));
+			ModConfig.craftSource, ModConfig.clearDestination, ModConfig.craftingEnabled));
 	}
 }

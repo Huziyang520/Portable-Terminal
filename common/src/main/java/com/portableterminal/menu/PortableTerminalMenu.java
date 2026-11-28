@@ -4,6 +4,8 @@
 
 package com.portableterminal.menu;
 
+import com.portableterminal.PortableTerminalMod;
+
 import com.portableterminal.config.ConfigSchema;
 import com.portableterminal.config.ModConfig;
 import com.portableterminal.inventory.ItemAccess;
@@ -70,7 +72,7 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 	// ==================== 槽位索引 ====================
 	// 新增的合成槽一律排在末尾：终端 / 背包 / 快捷栏 / 副手的索引与顺序保持原样。
 	public static final int PLAYER_INV_START = PortableTerminalLayout.MAX_ROWS * PortableTerminalLayout.COLS;
-	public static final int PLAYER_MAIN_SLOTS = 36;
+	public static final int PLAYER_MAIN_SLOTS = 27;
 	public static final int PLAYER_HOTBAR_SLOTS = 9;
 	public static final int OFFHAND_INDEX = PLAYER_INV_START + PLAYER_MAIN_SLOTS + PLAYER_HOTBAR_SLOTS;
 	/** 背包（主背包 + 快捷栏，不含副手）的槽位区间，Shift 移动用。 */
@@ -164,11 +166,11 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 		int expected = terminalSlotCount() + PLAYER_MAIN_SLOTS + PLAYER_HOTBAR_SLOTS + 1
 			+ PortableTerminalLayout.CRAFT_SLOT_COUNT + 1;
 		if (this.slots.size() == expected && this.craftGridSlots.size() == PortableTerminalLayout.CRAFT_SLOT_COUNT) {
-			com.portableterminal.PortableTerminalMod.LOGGER.info(
+			PortableTerminalMod.LOGGER.info(
 				"Terminal menu built: {} slots (terminal {}, crafting {})", this.slots.size(),
 				terminalSlotCount(), PortableTerminalLayout.CRAFT_SLOT_COUNT);
 		} else {
-			com.portableterminal.PortableTerminalMod.LOGGER.warn(
+			PortableTerminalMod.LOGGER.warn(
 				"Terminal menu slot layout mismatch: slots={} expected={} grid={} result={}",
 				this.slots.size(), expected, this.craftGridSlots.size(), this.craftResultSlot != null);
 		}
@@ -387,9 +389,15 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 			}
 		}
 		this.resultSlots.setItem(0, result);
-		this.setRemoteSlot(RESULT_SLOT_INDEX, result);
+		// 用槽位自己的 index，不要用常量推算：槽位表是「终端固定 8 行 + 背包 + 合成」拼出来的，
+		// 任何一处数量对不上，常量就会指到别人的槽位上（曾因此把服务端 tick 打崩）。
+		if (this.craftResultSlot == null || this.craftResultSlot.index >= this.slots.size()) {
+			return;
+		}
+		int resultIndex = this.craftResultSlot.index;
+		this.setRemoteSlot(resultIndex, result);
 		serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
-			this.containerId, this.incrementStateId(), RESULT_SLOT_INDEX, result));
+			this.containerId, this.incrementStateId(), resultIndex, result));
 	}
 
 	/**
@@ -403,6 +411,8 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 	public PostPlaceAction handlePlacement(boolean useMaxItems, boolean allowDroppingItemsToClear,
 			RecipeHolder<?> recipe, ServerLevel level, Inventory inventory) {
 		if (!this.craftingVisible || this.craftGridSlots.size() < PortableTerminalLayout.CRAFT_SLOT_COUNT) {
+			PortableTerminalMod.LOGGER.info("[terminal] place rejected: crafting={} grid={}",
+				this.craftingVisible, this.craftGridSlots.size());
 			return PostPlaceAction.NOTHING;
 		}
 		PlacementInfo info = recipe.value().placementInfo();
@@ -426,6 +436,10 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 			int available = countAvailable(ingredients.get(i));
 			sets = Math.min(sets, available / slotsPerIngredient[i]);
 		}
+		PortableTerminalMod.LOGGER.info(
+			"[terminal] place {} useMax={} crafting={} grid={} containers={} agg={} sets={}",
+			recipe.id(), useMaxItems, this.craftingVisible, this.craftGridSlots.size(),
+			this.containers.size(), this.aggregatedItems.size(), sets);
 		if (sets <= 0) {
 			clearCraftingGrid(false);
 			updateCraftingResult(null);
