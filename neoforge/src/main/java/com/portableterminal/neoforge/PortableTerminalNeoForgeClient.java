@@ -6,6 +6,7 @@ import com.portableterminal.client.gui.PortableTerminalScreen;
 import com.portableterminal.client.keybind.KeyBindHandler;
 import com.portableterminal.menu.ModMenuTypes;
 import com.portableterminal.network.TerminalCraftActionPacket;
+import com.portableterminal.network.TerminalPlaceRecipePacket;
 import com.portableterminal.network.TerminalItemsSyncPacket;
 import com.portableterminal.platform.ClientSender;
 import net.minecraft.client.KeyMapping;
@@ -50,6 +51,10 @@ public class PortableTerminalNeoForgeClient {
 		event.registrar("1").playToServer(TerminalCraftActionPacket.TYPE, TerminalCraftActionPacket.CODEC,
 			(payload, context) -> context.enqueueWork(() ->
 				TerminalCraftActionPacket.handleServer((net.minecraft.server.level.ServerPlayer) context.player(), payload)));
+
+		event.registrar("1").playToServer(TerminalPlaceRecipePacket.TYPE, TerminalPlaceRecipePacket.CODEC,
+			(payload, context) -> context.enqueueWork(() ->
+				TerminalPlaceRecipePacket.handleServer((net.minecraft.server.level.ServerPlayer) context.player(), payload)));
 	}
 
 	private void registerKeyMappings(RegisterKeyMappingsEvent event) {

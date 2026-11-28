@@ -13,6 +13,7 @@ import com.portableterminal.inventory.VanillaContainerAccess;
 import com.portableterminal.network.TerminalItemsSyncPacket;
 import com.portableterminal.platform.Services;
 import com.portableterminal.util.PinyinSearch;
+import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -152,8 +153,7 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 		Level level = playerInventory.player.level();
 		for (BlockPos pos : containerPositions) {
 			BlockEntity be = level.getBlockEntity(pos);
-			ItemAccess access = accessAt(be);
-			if (access != null) containers.add(access);
+			addContainerAccess(accessAt(be));
 		}
 
 		this.playerInventory = playerInventory;
@@ -429,8 +429,9 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 			}
 		}
 
-		// 能摆几套（Shift 一次摆满，否则一套）
-		int sets = useMaxItems ? 64 : 1;
+		// 摆几套：Shift 一次摆满；否则在网格里现有套数上加一套（原版也是点几次摆几套）
+		int alreadyPlaced = currentGridSets(info);
+		int sets = useMaxItems ? 64 : alreadyPlaced + 1;
 		for (int i = 0; i < slotsPerIngredient.length && sets > 0; i++) {
 			if (slotsPerIngredient[i] <= 0) continue;
 			int available = countAvailable(ingredients.get(i));
@@ -463,6 +464,35 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 			});
 		updateCraftingResult(null);
 		return PostPlaceAction.NOTHING;
+	}
+
+	/**
+	 * 网格里当前摆着这份配方的几套；不是这份配方（或为空）时返回 0。
+	 *
+	 * <p>用来支持「连点几次配方就摆几套」：原版每次点击会在已有基础上再加一套，
+	 * 而不是每次都重摆一套。</p>
+	 */
+	private int currentGridSets(PlacementInfo info) {
+		IntList slotsToIngredient = info.slotsToIngredientIndex();
+		List<Ingredient> ingredients = info.ingredients();
+		int sets = Integer.MAX_VALUE;
+		boolean any = false;
+		for (int i = 0; i < this.craftGridSlots.size(); i++) {
+			int ingredientIndex = i < slotsToIngredient.size() ? slotsToIngredient.getInt(i) : -1;
+			ItemStack stack = this.craftGridSlots.get(i).getItem();
+			if (ingredientIndex < 0 || ingredientIndex >= ingredients.size()) {
+				if (!stack.isEmpty()) {
+					return 0;
+				}
+				continue;
+			}
+			if (stack.isEmpty() || !ingredients.get(ingredientIndex).test(stack)) {
+				return 0;
+			}
+			any = true;
+			sets = Math.min(sets, stack.getCount());
+		}
+		return any ? Math.max(0, sets) : 0;
 	}
 
 	/** 按「合成取料来源」统计某材料当前能拿到多少。 */
@@ -1102,9 +1132,27 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 		for (BlockPos pos : containerPositions) {
 			BlockEntity be = level.getBlockEntity(pos);
 			ItemAccess access = accessAt(be);
-			if (access != null) containers.add(access);
+			if (access != null) addContainerAccess(access);
 		}
 		rebuildAggregatedItems();
+	}
+
+	/**
+	 * 登记一个容器访问器；同一个底层物品栏只登记一次。
+	 *
+	 * <p>多方块容器（大箱子之类）会把同一份物品栏挂在多个方块位置，逐位置登记会把物品统计两遍。</p>
+	 */
+	private void addContainerAccess(ItemAccess access) {
+		if (access == null) {
+			return;
+		}
+		Object backing = access.backing();
+		for (ItemAccess existing : containers) {
+			if (existing.backing() == backing) {
+				return;
+			}
+		}
+		containers.add(access);
 	}
 
 	public List<BlockPos> getContainerPositions() { return containerPositions; }

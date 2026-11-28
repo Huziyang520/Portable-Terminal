@@ -23,6 +23,11 @@ public class NeoForgeResourceHandlerAccess implements ItemAccess {
 	}
 
 	@Override
+	public Object backing() {
+		return handler;
+	}
+
+	@Override
 	public int size() {
 		return handler.size();
 	}

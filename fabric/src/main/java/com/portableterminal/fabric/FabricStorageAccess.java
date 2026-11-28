@@ -29,6 +29,11 @@ public class FabricStorageAccess implements ItemAccess {
 		this.storage = storage;
 	}
 
+	@Override
+	public Object backing() {
+		return storage;
+	}
+
 	private StorageView<ItemVariant> viewAt(int slot) {
 		if (slot < 0) {
 			return null;

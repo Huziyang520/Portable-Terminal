@@ -5,14 +5,20 @@ import com.portableterminal.client.gui.PortableTerminalScreen;
 import com.portableterminal.config.ModConfig;
 import com.portableterminal.menu.ModMenuTypes;
 import com.portableterminal.menu.PortableTerminalMenu;
+import com.portableterminal.network.TerminalPlaceRecipePacket;
+import com.portableterminal.platform.ClientSender;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.gui.handlers.IGuiContainerHandler;
+import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
+import mezz.jei.api.recipe.transfer.IRecipeTransferError;
+import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 import mezz.jei.api.recipe.transfer.IRecipeTransferInfo;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
@@ -56,7 +62,7 @@ public class PortableTerminalJeiPlugin implements IModPlugin {
 
 	@Override
 	public void registerRecipeTransferHandlers(IRecipeTransferRegistration registration) {
-		registration.addRecipeTransferHandler(new CraftingGridTransferInfo());
+		registration.addRecipeTransferHandler(new CraftingTransferHandler(), RecipeTypes.CRAFTING);
 	}
 
 	/**
@@ -95,8 +101,50 @@ public class PortableTerminalJeiPlugin implements IModPlugin {
 
 		@Override
 		public List<Slot> getInventorySlots(PortableTerminalMenu menu, RecipeHolder<CraftingRecipe> recipe) {
+			// 终端存储的槽位也算「可用材料」：JEI 按这些槽统计材料够不够，
+			// 只给背包槽的话，明明终端里有材料也显示缺料。真正的搬运在 CraftingTransferHandler。
+			List<Slot> slots = new java.util.ArrayList<>(menu.slots.size());
+			slots.addAll(menu.getTerminalSlots());
 			int end = Math.min(PortableTerminalMenu.PLAYER_INV_END, menu.slots.size());
-			return menu.slots.subList(PortableTerminalMenu.PLAYER_INV_START, end);
+			slots.addAll(menu.slots.subList(PortableTerminalMenu.PLAYER_INV_START, end));
+			return slots;
+		}
+	}
+
+	/**
+	 * 「+」的实际执行：只把配方 id 发给服务端，由菜单的摆放逻辑取料。
+	 *
+	 * <p>JEI 自己搬物品是改客户端槽位，终端材料在服务端聚合，搬不动；而且那样也不会按
+	 * 「合成取料来源」取料。走服务端就与配方书同一条路径。</p>
+	 */
+	private static final class CraftingTransferHandler
+		implements IRecipeTransferHandler<PortableTerminalMenu, RecipeHolder<CraftingRecipe>> {
+
+		@Override
+		public Class<? extends PortableTerminalMenu> getContainerClass() {
+			return PortableTerminalMenu.class;
+		}
+
+		@Override
+		public Optional<MenuType<PortableTerminalMenu>> getMenuType() {
+			return Optional.of(ModMenuTypes.get());
+		}
+
+		@Override
+		public mezz.jei.api.recipe.types.IRecipeType<RecipeHolder<CraftingRecipe>> getRecipeType() {
+			return RecipeTypes.CRAFTING;
+		}
+
+		@Override
+		public IRecipeTransferError transferRecipe(PortableTerminalMenu menu, RecipeHolder<CraftingRecipe> recipe,
+				IRecipeSlotsView recipeSlotsView, Player player, boolean maxTransfer, boolean doTransfer) {
+			if (!ModConfig.craftingEnabled) {
+				return null;
+			}
+			if (doTransfer) {
+				ClientSender.sendToServer(new TerminalPlaceRecipePacket(recipe.id().identifier(), maxTransfer));
+			}
+			return null;
 		}
 	}
 }

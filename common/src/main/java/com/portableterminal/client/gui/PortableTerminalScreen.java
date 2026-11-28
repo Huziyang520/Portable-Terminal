@@ -88,6 +88,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private static final Identifier OFFHAND_ICON_SPRITE =
 		Identifier.withDefaultNamespace("container/slot/shield");
 	private static final int COL_SCROLL_THUMB  = 0xFFC6C6C6;
+	/** 滚动条沟槽底色（与面板贴图里沟槽的填充色一致）。 */
+	private static final int COL_SCROLL_TRACK  = 0xFF555555;
 	private static final int COL_SCROLL_THUMB2 = 0xFF808080;
 
 	/** 合成带是否显示（来自客户端配置，打开界面时定死；改配置需要重开终端）。 */
@@ -512,7 +514,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			? PortableTerminalLayout.PANEL_CRAFTING_SOURCE_HEIGHT : PortableTerminalLayout.PANEL_SOURCE_HEIGHT;
 		int footerSrcY = this.crafting
 			? PortableTerminalLayout.PANEL_FOOTER_CRAFTING_SRC_Y
-			: PortableTerminalLayout.PANEL_ROW_BAND_SRC_Y + SLOT_SIZE;
+			: PortableTerminalLayout.PANEL_FOOTER_SRC_Y;
 		int headerH = PortableTerminalLayout.PANEL_HEADER_HEIGHT;
 		int x = this.leftPos;
 		int y = this.topPos;
@@ -533,10 +535,15 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 				x, y + PortableTerminalLayout.craftBandTop(this.rows),
 				this.guiWidth, PortableTerminalLayout.CRAFT_BAND_HEIGHT);
 		}
+		int footerTop = y + PortableTerminalLayout.footerTop(this.rows, this.crafting);
 		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, sprite,
 			srcW, srcH, 0, footerSrcY,
-			x, y + PortableTerminalLayout.footerTop(this.rows, this.crafting),
-			this.guiWidth, PortableTerminalLayout.PANEL_FOOTER_HEIGHT);
+			x, footerTop, this.guiWidth, PortableTerminalLayout.PANEL_FOOTER_HEIGHT);
+		// 页脚首行带着滚动条沟槽的封口黑线；沟槽本来就是一条到底的凹槽，
+		// 这 1px 会被看成凭空多出来的一根黑线，用沟槽本色盖掉。
+		gfx.fill(x + PortableTerminalLayout.SCROLLBAR_LEFT + 1, footerTop,
+			x + PortableTerminalLayout.SCROLLBAR_LEFT + PortableTerminalLayout.SCROLLBAR_WIDTH - 1,
+			footerTop + 1, COL_SCROLL_TRACK);
 
 		// 副手槽在面板之外：原版圆角小面板外框 + 槽位底 + 原版 shield 图标（空槽时显示）
 		int offX = x + PortableTerminalLayout.OFFHAND_X;

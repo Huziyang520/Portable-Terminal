@@ -12,6 +12,11 @@ import net.minecraft.world.item.ItemStack;
 public record VanillaContainerAccess(Container container) implements ItemAccess {
 
 	@Override
+	public Object backing() {
+		return container;
+	}
+
+	@Override
 	public int size() {
 		return container.getContainerSize();
 	}

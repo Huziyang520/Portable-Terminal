@@ -99,8 +99,14 @@ public final class PortableTerminalLayout {
 	public static final int PANEL_SOURCE_WIDTH = 193;
 	public static final int PANEL_SOURCE_HEIGHT = 147;
 	public static final int PANEL_HEADER_HEIGHT = 31;
-	public static final int PANEL_ROW_BAND_SRC_Y = 31;
-	public static final int PANEL_CRAFT_BAND_SRC_Y = PANEL_ROW_BAND_SRC_Y + SLOT_SIZE;
+	/**
+	 * 槽位行分段的源行：必须取一行**完整的**槽位（上边框 + 16px 槽 + 白色下边）。
+	 * 源图 y=31 那行是旧固定面板的首行，底部少一条白线，重复贴出来每行槽位都少 1px。
+	 */
+	public static final int PANEL_ROW_BAND_SRC_Y = 63;
+	/** 页脚分段源行（不含合成带的面板）。 */
+	public static final int PANEL_FOOTER_SRC_Y = 49;
+	public static final int PANEL_CRAFT_BAND_SRC_Y = 49;
 	public static final int PANEL_CRAFTING_SOURCE_HEIGHT = PANEL_SOURCE_HEIGHT + CRAFT_BAND_HEIGHT;
 	public static final int PANEL_FOOTER_CRAFTING_SRC_Y = PANEL_CRAFT_BAND_SRC_Y + CRAFT_BAND_HEIGHT;
 	public static final int PANEL_FOOTER_HEIGHT = 98;

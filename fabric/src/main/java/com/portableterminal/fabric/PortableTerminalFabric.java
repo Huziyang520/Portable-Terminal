@@ -2,6 +2,7 @@ package com.portableterminal.fabric;
 
 import com.portableterminal.menu.ModMenuTypes;
 import com.portableterminal.network.OpenTerminalPacket;
+import com.portableterminal.network.TerminalPlaceRecipePacket;
 import com.portableterminal.network.TerminalCraftActionPacket;
 import com.portableterminal.network.TerminalItemsSyncPacket;
 import com.portableterminal.network.TerminalSlotClickPacket;
@@ -19,6 +20,7 @@ public class PortableTerminalFabric implements ModInitializer {
 		PayloadTypeRegistry.serverboundPlay().register(OpenTerminalPacket.TYPE, OpenTerminalPacket.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(TerminalSlotClickPacket.TYPE, TerminalSlotClickPacket.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(TerminalCraftActionPacket.TYPE, TerminalCraftActionPacket.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(TerminalPlaceRecipePacket.TYPE, TerminalPlaceRecipePacket.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(TerminalItemsSyncPacket.TYPE, TerminalItemsSyncPacket.CODEC);
 
 		// Server side handling is shared with NeoForge, so it lives in the common packet records.
@@ -29,6 +31,8 @@ public class PortableTerminalFabric implements ModInitializer {
 			(payload, context) -> TerminalSlotClickPacket.handleServer(context.player(), payload));
 		ServerPlayNetworking.registerGlobalReceiver(TerminalCraftActionPacket.TYPE,
 			(payload, context) -> TerminalCraftActionPacket.handleServer(context.player(), payload));
+		ServerPlayNetworking.registerGlobalReceiver(TerminalPlaceRecipePacket.TYPE,
+			(payload, context) -> TerminalPlaceRecipePacket.handleServer(context.player(), payload));
 
 		// Fabric accepts registry entries during mod initialisation.
 		ModMenuTypes.bind(Registry.register(BuiltInRegistries.MENU, ModMenuTypes.ID, ModMenuTypes.create()));
