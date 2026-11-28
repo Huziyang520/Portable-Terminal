@@ -427,13 +427,15 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 			sets = Math.min(sets, available / slotsPerIngredient[i]);
 		}
 		if (sets <= 0) {
-			clearCraftingGrid();
+			clearCraftingGrid(false);
 			updateCraftingResult(null);
 			return PostPlaceAction.PLACE_GHOST_RECIPE;
 		}
 		final int perSlot = Math.min(sets, 64);
 
-		clearCraftingGrid();
+		if (!clearCraftingGrid(false)) {
+			return PostPlaceAction.NOTHING;
+		}
 		PlaceRecipeHelper.placeRecipe(PortableTerminalLayout.CRAFT_GRID_SIZE,
 			PortableTerminalLayout.CRAFT_GRID_SIZE, recipe.value(), info.slotsToIngredientIndex(),
 			(ingredientIndex, gridIndex, gridXPos, gridYPos) -> {
@@ -560,11 +562,22 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 		return result;
 	}
 
+	/** 清空合成网格（允许放不下时落地）：按键、Shift 转移、关界面都走这个。 */
+	public void clearCraftingGrid() {
+		clearCraftingGrid(true);
+	}
+
 	/**
 	 * 清空合成网格：去向按「清空去向」设置——背包优先或终端优先，两边都放不下才落地。
-	 * 也用于放置配方前腾地方、关界面时归还。
+	 *
+	 * @param allowDrop {@code false} 用于「摆放配方前腾地方」：格子里的东西归不了位就整体放弃，
+	 *                  绝不能因为点了配方反而把玩家的物品丢在地上
+	 * @return 是否已清空（{@code false} 表示放不下且没有改动任何东西）
 	 */
-	public void clearCraftingGrid() {
+	public boolean clearCraftingGrid(boolean allowDrop) {
+		if (!allowDrop && !gridReturnsFit()) {
+			return false;
+		}
 		List<ItemStack> leftovers = new ArrayList<>();
 		for (Slot slot : this.craftGridSlots) {
 			if (slot.hasItem()) {
@@ -573,25 +586,13 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 		}
 		this.resultSlots.setItem(0, ItemStack.EMPTY);
 		// 只有服务端负责把东西还回去：客户端这边清掉槽位就够了，否则会改动本地的容器副本。
-		for (ItemStack stack : leftovers) {
-			if (stack.isEmpty() || !(this.player instanceof ServerPlayer)) continue;
-			ItemStack remaining = stack;
-			if (this.clearDestination == ConfigSchema.CLEAR_DEST_TERMINAL) {
-				remaining = insertIntoContainers(remaining);
+		if (this.player instanceof ServerPlayer) {
+			for (ItemStack stack : leftovers) {
+				if (stack.isEmpty()) continue;
+				ItemStack remaining = relocateToDestination(stack);
 				if (!remaining.isEmpty()) {
-					this.player.getInventory().add(remaining);
-					remaining = ItemStack.EMPTY;
+					this.player.drop(remaining, false, Prediction.PREDICTED);
 				}
-			} else {
-				ItemStack notStored = remaining.copy();
-				this.player.getInventory().add(notStored);
-				remaining = notStored;
-				if (!remaining.isEmpty()) {
-					remaining = insertIntoContainers(remaining);
-				}
-			}
-			if (!remaining.isEmpty()) {
-				this.player.drop(remaining, false, Prediction.PREDICTED);
 			}
 		}
 		if (this.player instanceof ServerPlayer serverPlayer) {
@@ -600,6 +601,53 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 			Services.PLATFORM.sendToPlayer(serverPlayer,
 				TerminalItemsSyncPacket.fromItemStacks(this.aggregatedItems));
 		}
+		return true;
+	}
+
+	/**
+	 * 按「清空去向」把一堆东西搬到背包或终端，搬不动的部分原样返回。
+	 * 传进来的 stack 会被消耗，返回的是剩余的部分。
+	 */
+	private ItemStack relocateToDestination(ItemStack stack) {
+		ItemStack rest = stack.copy();
+		if (this.clearDestination == ConfigSchema.CLEAR_DEST_TERMINAL) {
+			rest = insertIntoContainers(rest);
+			if (rest.isEmpty()) {
+				return rest;
+			}
+		}
+		this.player.getInventory().add(rest);
+		if (rest.isEmpty()) {
+			return rest;
+		}
+		// 背包塞不下时再退回终端（反之亦然），两边都不行才把剩下的交回去
+		if (this.clearDestination == ConfigSchema.CLEAR_DEST_INVENTORY) {
+			rest = insertIntoContainers(rest);
+		}
+		return rest;
+	}
+
+	/** 网格里的东西按当前「清空去向」能不能全部归位（不能就别动，交给调用方放弃）。 */
+	private boolean gridReturnsFit() {
+		List<ItemStack> stacks = new ArrayList<>();
+		for (Slot slot : this.craftGridSlots) {
+			if (slot.hasItem()) {
+				stacks.add(slot.getItem());
+			}
+		}
+		if (stacks.isEmpty()) {
+			return true;
+		}
+		// 去向是终端且确实连着容器时，终端就是主要存放处，归不下的部分会回落到背包
+		if (this.clearDestination == ConfigSchema.CLEAR_DEST_TERMINAL && !this.containers.isEmpty()) {
+			return true;
+		}
+		for (ItemStack stack : stacks) {
+			if (freeSpaceIn(this.player, stack) < stack.getCount()) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/** 关终端时把网格里的东西还回去（去向同上），绝不留在一个已关闭的菜单里。 */
@@ -853,13 +901,10 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 		// 合成网格：Shift 点击按「清空去向」转移，与清空按键同一套规则
 		if (this.craftGridSlots.contains(slot)) {
 			ItemStack stack = slot.remove(slot.getItem().getCount());
-			if (this.clearDestination == ConfigSchema.CLEAR_DEST_TERMINAL) {
-				ItemStack remaining = insertIntoContainers(stack);
-				if (!remaining.isEmpty()) this.player.getInventory().add(remaining);
-			} else {
-				ItemStack remaining = stack.copy();
-				this.player.getInventory().add(remaining);
-				if (!remaining.isEmpty()) insertIntoContainers(remaining);
+			ItemStack leftover = relocateToDestination(stack);
+			if (!leftover.isEmpty()) {
+				// 背包和终端都塞不下：原样留在格子里，绝不静默丢弃
+				slot.set(leftover);
 			}
 			slot.setChanged();
 			this.broadcastChanges();
@@ -877,7 +922,7 @@ public class PortableTerminalMenu extends AbstractCraftingMenu {
 			ItemStack template = slot.getItem();
 			ItemStack extracted = extractFromContainers(template, template.getMaxStackSize());
 			if (!extracted.isEmpty()) {
-				this.moveItemStackTo(extracted, terminalSlotCount(), terminalSlotCount() + 36, true);
+				this.moveItemStackTo(extracted, PLAYER_INV_START, PLAYER_INV_END, true);
 				if (!extracted.isEmpty()) {
 					// 装不下的部分放回容器，绝不丢出：原版 shift 取物在背包满时什么都不发生
 					insertIntoContainers(extracted);

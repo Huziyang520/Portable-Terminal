@@ -112,6 +112,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private int cachedScrollOffset;
 	private int cachedMaxScroll;
 	private boolean scrollbarDirty = true;
+	/** JEI 每帧都会问一次避让区域，缓存住；布局/配方书状态一变就失效。 */
+	private List<Rect2i> cachedExclusionAreas;
 
 	public PortableTerminalScreen(PortableTerminalMenu menu, Inventory playerInventory, Component title) {
 		this(menu, playerInventory, title, ModConfig.craftingEnabled);
@@ -148,6 +150,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	protected void init() {
 		super.init();
 		// 面板高度跟着显示行数走。26.x 的 imageHeight 是 final，不能改，所以自己按 guiHeight 居中。
+		this.cachedExclusionAreas = null;
 		this.rows = Math.min(this.rows, maxRowsForScreen());
 		this.menu.applyViewLayout(this.rows, this.crafting);
 		// 客户端自己那份菜单不会收到打开包里的偏好，这里按本地状态对齐一次（服务端由打开包带上）
@@ -355,6 +358,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		this.inventoryLabelY = PortableTerminalLayout.invTop(next, this.crafting) - 11;
 		this.topPos = (this.height - this.guiHeight) / 2;
 		this.leftPos = screenLeft();
+		this.cachedExclusionAreas = null;
 		this.rebuildWidgets();
 	}
 
@@ -381,12 +385,16 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 	@Override
 	public void recipesUpdated() {
-		this.recipeBook.recipesUpdated();
+		if (recipeBookEnabled()) {
+			this.recipeBook.recipesUpdated();
+		}
 	}
 
 	@Override
 	public void fillGhostRecipe(RecipeDisplay display) {
-		this.recipeBook.fillGhostRecipe(display);
+		if (recipeBookOpen()) {
+			this.recipeBook.fillGhostRecipe(display);
+		}
 	}
 
 	@Override
@@ -403,12 +411,12 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 	@Override
 	public boolean isInputCaptured() {
-		return super.isInputCaptured() || this.recipeBook.capturesInput();
+		return super.isInputCaptured() || (recipeBookOpen() && this.recipeBook.capturesInput());
 	}
 
 	@Override
 	public boolean charTyped(CharacterEvent event) {
-		return this.recipeBook.charTyped(event) || super.charTyped(event);
+		return (recipeBookOpen() && this.recipeBook.charTyped(event)) || super.charTyped(event);
 	}
 
 	@Override
@@ -422,8 +430,9 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			this.searchBox.keyPressed(event);
 			return true;
 		}
-		// 配方书自己的搜索框与「ESC 关书」先处理，剩下的才交回原版（含 ESC 关界面）
-		if (this.recipeBook.keyPressed(event)) {
+		// 配方书自己的搜索框与「ESC 关书」先处理，剩下的才交回原版（含 ESC 关界面）。
+		// 注意只在书真的画出来时才转发，否则书的数据仍是「打开」状态会白吃一次 ESC。
+		if (recipeBookOpen() && this.recipeBook.keyPressed(event)) {
 			return true;
 		}
 		return super.keyPressed(event);
@@ -438,6 +447,10 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	@Override
 	protected boolean hasClickedOutside(double mx, double my, int xo, int yo) {
 		boolean outside = mx < xo || my < yo || mx >= xo + this.guiWidth || my >= yo + this.guiHeight;
+		if (!recipeBookOpen()) {
+			// 书没显示（或配置关掉了）时不能问它：它会答「点在书里」，导致点外面关不掉终端
+			return outside;
+		}
 		return this.recipeBook.hasClickedOutside(mx, my, this.leftPos, this.topPos, this.guiWidth, this.guiHeight)
 			&& outside;
 	}
@@ -448,6 +461,9 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	 * 外部 UI（JEI）需要避让的区域，屏幕坐标系：面板本身、面板左侧那一列按钮，以及打开着的配方书。
 	 */
 	public List<Rect2i> getExclusionAreas() {
+		if (this.cachedExclusionAreas != null) {
+			return this.cachedExclusionAreas;
+		}
 		List<Rect2i> areas = new ArrayList<>();
 		areas.add(new Rect2i(this.leftPos, this.topPos, this.guiWidth, this.guiHeight));
 		int colLeft = this.leftPos + PortableTerminalLayout.SORT_BTN_X;
@@ -462,7 +478,8 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			areas.add(new Rect2i(bookLeft, bookTop,
 				RecipeBookComponent.IMAGE_WIDTH, RecipeBookComponent.IMAGE_HEIGHT));
 		}
-		return areas;
+		this.cachedExclusionAreas = List.copyOf(areas);
+		return this.cachedExclusionAreas;
 	}
 
 	@Override
@@ -695,7 +712,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
-		if (this.recipeBook.mouseDragged(event, dragX, dragY)) {
+		if (recipeBookOpen() && this.recipeBook.mouseDragged(event, dragX, dragY)) {
 			return true;
 		}
 		if (draggingScrollbar) {
@@ -816,6 +833,19 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			this.tooltip = tooltip;
 			this.highlighted = highlighted;
 			this.action = action;
+			refreshTooltip();
+		}
+
+		/** 提示文字只在状态变化（构造 / 点击之后）时重建，onPress 里调一次就够了。 */
+		private void refreshTooltip() {
+			if (this.tooltip == null) {
+				return;
+			}
+			Component tip = this.tooltip.get();
+			if (!tip.equals(this.lastTooltipText)) {
+				this.lastTooltipText = tip;
+				this.setTooltip(Tooltip.create(tip));
+			}
 		}
 
 		IconButton(int x, int y, Identifier icon, boolean drawBase, Supplier<Component> tooltip,
@@ -826,6 +856,7 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 		@Override
 		public void onPress(InputWithModifiers input) {
 			this.action.run();
+			refreshTooltip();
 		}
 
 		@Override
@@ -842,13 +873,6 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			if (this.highlighted.getAsBoolean()) {
 				gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.HIGHLIGHT_SPRITE,
 					this.getX(), this.getY(), BTN_SIZE, BTN_SIZE);
-			}
-			if (this.tooltip != null) {
-				Component tip = this.tooltip.get();
-				if (!tip.equals(this.lastTooltipText)) {
-					this.lastTooltipText = tip;
-					this.setTooltip(Tooltip.create(tip));
-				}
 			}
 		}
 
