@@ -84,6 +84,9 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 	private static final int COL_THUMB         = 0xFFC6C6C6;
 	private static final int COL_HIGHLIGHT     = 0xFFFFFFFF;
 	private static final int COL_TEXT          = 0xFF404040;
+	/** 原版空副手槽的 shield 图标。 */
+	private static final Identifier OFFHAND_ICON_SPRITE =
+		Identifier.withDefaultNamespace("container/slot/shield");
 	private static final int COL_SCROLL_THUMB  = 0xFFC6C6C6;
 	private static final int COL_SCROLL_THUMB2 = 0xFF808080;
 
@@ -241,8 +244,15 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			}));
 	}
 
-	/** 合成带右上角的「清空合成栏」按键。 */
+	/**
+	 * 「清空合成栏」按键。当前不挂到界面上：合成区右侧那个位置用户否掉了，
+	 * 新位置（九宫格内）还要确认，先只保留实现。
+	 */
 	private void addClearGridButton() {
+		return;
+	}
+
+	private void addClearGridButtonImpl() {
 		if (!this.crafting) {
 			return;
 		}
@@ -448,7 +458,12 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 
 	@Override
 	protected boolean hasClickedOutside(double mx, double my, int xo, int yo) {
-		boolean outside = mx < xo || my < yo || mx >= xo + this.guiWidth || my >= yo + this.guiHeight;
+		// 左侧按钮列与副手槽都在面板外：它们也算「界面内」，否则点副手会被当成点外面，
+		// 原版就会关界面并把光标上的物品丢掉。
+		int minX = this.leftPos + Math.min(PortableTerminalLayout.SORT_BTN_X,
+			PortableTerminalLayout.OFFHAND_X - 5) - 2;
+		int maxX = xo + this.guiWidth;
+		boolean outside = mx < minX || my < yo || mx >= maxX || my >= yo + this.guiHeight;
 		if (!recipeBookOpen()) {
 			// 书没显示（或配置关掉了）时不能问它：它会答「点在书里」，导致点外面关不掉终端
 			return outside;
@@ -530,12 +545,15 @@ public class PortableTerminalScreen extends AbstractContainerScreen<PortableTerm
 			x, y + PortableTerminalLayout.footerTop(this.rows, this.crafting),
 			this.guiWidth, PortableTerminalLayout.PANEL_FOOTER_HEIGHT);
 
-		// 副手槽在面板之外：原版圆角小面板外框 + 槽位底
+		// 副手槽在面板之外：原版圆角小面板外框 + 槽位底 + 原版 shield 图标（空槽时显示）
 		int offX = x + PortableTerminalLayout.OFFHAND_X;
 		int offY = y + PortableTerminalLayout.offhandY(this.rows, this.crafting);
 		drawFramePanel(gfx, offX - 5, offY - 5, SLOT_SIZE + 8, SLOT_SIZE + 8);
 		gfx.blitSprite(RenderPipelines.GUI_TEXTURED, PortableTerminalLayout.SLOT_SPRITE,
 			offX - 1, offY - 1, SLOT_SIZE, SLOT_SIZE);
+		if (this.menu.getSlot(PortableTerminalMenu.OFFHAND_INDEX).getItem().isEmpty()) {
+			gfx.blitSprite(RenderPipelines.GUI_TEXTURED, OFFHAND_ICON_SPRITE, offX, offY, 16, 16);
+		}
 
 		drawScrollbarThumb(gfx);
 	}

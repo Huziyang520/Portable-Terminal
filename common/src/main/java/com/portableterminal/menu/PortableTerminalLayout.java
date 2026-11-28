@@ -64,12 +64,13 @@ public final class PortableTerminalLayout {
 	public static final int CRAFT_SLOT_COUNT = CRAFT_GRID_SIZE * CRAFT_GRID_SIZE;
 	/** 网格 / 结果 / 箭头 / 配方书按钮 / 清空按键，坐标都相对合成带顶边。 */
 	public static final int CRAFT_GRID_X = 41;
-	public static final int CRAFT_GRID_Y = 5;
+	/** 槽位在贴图里比合成带顶边低 6px（贴图里第一格是边框、第二格才是槽位内部）。 */
+	public static final int CRAFT_GRID_Y = 6;
 	public static final int CRAFT_RESULT_X = 120;
-	public static final int CRAFT_RESULT_Y = 23;
+	public static final int CRAFT_RESULT_Y = 24;
 	/** 箭头直接取原版工作台贴图里的那一块，尺寸与原版一致（22×15）。 */
 	public static final int CRAFT_ARROW_X = 96;
-	public static final int CRAFT_ARROW_Y = 25;
+	public static final int CRAFT_ARROW_Y = 26;
 	public static final int CRAFT_ARROW_WIDTH = 22;
 	public static final int CRAFT_ARROW_HEIGHT = 15;
 	public static final int RECIPE_BUTTON_X = 5;
@@ -150,9 +151,13 @@ public final class PortableTerminalLayout {
 		return TERM_TOP;
 	}
 
-	/** 合成带顶边；合成关闭时它就是页脚顶边。 */
+	/**
+	 * 合成带顶边（贴图坐标）：表头 31px 之后接槽位行，所以基准是 31 而不是槽位的 32。
+	 * 用 32 会让合成带/页脚整体比槽位行低 1px，两个区块之间露一条背景色缝（看着像黑线）。
+	 * 合成关闭时它就是页脚顶边。
+	 */
 	public static int craftBandTop(int rows) {
-		return TERM_TOP + clampRows(rows) * SLOT_SIZE;
+		return PANEL_HEADER_HEIGHT + clampRows(rows) * SLOT_SIZE;
 	}
 
 	public static int footerTop(int rows, boolean crafting) {
